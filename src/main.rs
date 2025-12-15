@@ -3,6 +3,8 @@ use std::{
     net::{self, TcpStream},
 };
 
+use crate::Sender::TcpSender;
+
 mod Sender;
 mod listener;
 fn main() {
@@ -21,10 +23,8 @@ fn main() {
         }
         "2" => {
             println!("choosed sender");
-            let mut sender =
-                Sender::try_to_establish_sender("localhost:1212".to_string(), 5).unwrap();
-            sender.write_all("buf".as_bytes()).unwrap();
-            sender.flush().unwrap();
+            let mut sender = TcpSender::new("localhost:1212".to_string(), 5);
+            sender.reply("Hello world!".to_string()).unwrap();
         }
         &_ => {}
     }
