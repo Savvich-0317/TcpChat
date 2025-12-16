@@ -4,60 +4,38 @@ pub enum SenderErrors {
 }
 pub struct TcpSender {
     addr: String,
-    Stream: Box<dyn InternalSends>,
+    Stream: Option<TcpStream>,
 }
 impl TcpSender {
-    pub fn new(addr: String, times: u32) -> TcpSender {
+    pub fn new(addr: String, times: u32) -> Result<TcpSender, String> {
         let mut sender = TcpSender {
-            addr: "addr".to_string(),
-            Stream: Box::new(Nothing {}),
+            addr: addr.clone(),
+            Stream: None,
         };
-        sender.try_to_establish_sender(addr, times).unwrap();
-        sender
+        sender.connect(addr, times)
     }
 
-    pub fn reply(&mut self, message: String) -> Result<(), &str> {
-        self.Stream.reply(message)
-    }
-}
-struct Nothing {}
-
-trait sends {
-    fn try_to_establish_sender(&mut self, addr: String, times: u32) -> Result<(), &str>;
-}
-
-impl sends for TcpSender {
-    fn try_to_establish_sender(&mut self, addr: String, times: u32) -> Result<(), &str> {
+    pub fn connect(mut self, addr: String, times: u32) -> Result<TcpSender, String> {
         for i in 0..times {
-            let mut sender = TcpStream::connect(&addr);
-            match sender {
-                Ok(sender) => {
-                    self.Stream = Box::new(sender);
-                    return Ok(());
+            match TcpStream::connect(&addr) {
+                Ok(stream) => {
+                    self.Stream = Some(stream);
+                    return Ok(self);
                 }
-                Err(_) => {
-                    println!("retrying..{}", i);
-                }
+                Err(_) => {}
             }
             thread::sleep(Duration::from_secs(1));
         }
-        Err("Cannot create connection to listener.")
+        Err(format!("Failed after {} connects", times).to_string())
     }
-}
 
-trait InternalSends {
-    fn reply(&mut self, message: String) -> Result<(), &str>;
-}
-impl InternalSends for TcpStream {
-    fn reply(&mut self, message: String) -> Result<(), &str> {
-        match self.write_all(message.as_bytes()) {
-            Ok(_) => Ok(()),
-            Err(_) => Err("Failed to write a message, probably connection is closed"),
+    pub fn reply(&mut self, message: String) -> Result<(), String> {
+        match self.Stream.as_mut() {
+            Some(stream) => match stream.write_all(format!("{message}\n\n").as_bytes()) {
+                Ok(_) => Ok(()),
+                Err(e) => Err(e.to_string()),
+            },
+            None => Err("Error while sending a message".to_string()),
         }
-    }
-}
-impl InternalSends for Nothing {
-    fn reply(&mut self, message: String) -> Result<(), &str> {
-        Err("There was never connection established")
     }
 }
