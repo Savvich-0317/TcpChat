@@ -1,14 +1,12 @@
 use std::{
-    io::{self, BufRead, BufReader, Read, Write},
-    net::{self, TcpListener, TcpStream},
-    thread,
-    time::Duration,
+    io::{self, BufRead, BufReader},
+    net::TcpListener,
 };
 
-use crate::Sender::TcpSender;
+use crate::{listen::print_stream, sender::TcpSender};
 
-mod Listener;
-mod Sender;
+mod listen;
+mod sender;
 fn main() {
     println!("choose operation mode 2-sender 1-listener");
     let mut choose = "".to_string();
@@ -21,21 +19,19 @@ fn main() {
             for stream in listener.incoming() {
                 println!("Got stream connection");
                 let stream = stream.unwrap();
-                let buf_reader = BufReader::new(&stream);
 
-                for line in buf_reader.lines() {
-                    match line {
-                        Ok(msg) => println!("{}", msg),
-                        Err(_) => break,
-                    }
-                }
-                println!("Finished");
+                stream.print_stream();
             }
         }
         "2" => {
             println!("choosed sender");
-            let mut sender = TcpSender::new("localhost:1212".to_string(), 5).unwrap();
-            sender.reply("aboba".to_string()).unwrap();
+            let mut sender = TcpSender::new("localhost:1212".to_string(), 5).unwrap(); //drops stream if goes out of scope
+
+            loop {
+                let mut message = "".to_string();
+                io::stdin().read_line(&mut message).unwrap();
+                sender.reply(message.to_string()).unwrap();
+            }
         }
         &_ => {}
     }

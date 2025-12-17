@@ -4,7 +4,7 @@ pub enum SenderErrors {
 }
 pub struct TcpSender {
     addr: String,
-    Stream: Option<TcpStream>,
+    pub Stream: Option<TcpStream>,
 }
 impl TcpSender {
     pub fn new(addr: String, times: u32) -> Result<TcpSender, String> {
@@ -31,7 +31,7 @@ impl TcpSender {
 
     pub fn reply(&mut self, message: String) -> Result<(), String> {
         match self.Stream.as_mut() {
-            Some(stream) => match stream.write_all(format!("{message}\n\n").as_bytes()) {
+            Some(stream) => match stream.write_all(format!("{message}").as_bytes()) {
                 Ok(_) => Ok(()),
                 Err(e) => Err(e.to_string()),
             },
