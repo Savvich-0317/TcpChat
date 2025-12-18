@@ -3,7 +3,7 @@ use std::{
     net::TcpListener,
 };
 
-use crate::{listen::print_stream, sender::TcpSender};
+use crate::{listen::PrintStream, sender::TcpSender};
 
 mod listen;
 mod sender;
@@ -18,9 +18,7 @@ fn main() {
 
             for stream in listener.incoming() {
                 println!("Got stream connection");
-                let stream = stream.unwrap();
-
-                stream.print_stream();
+                stream.unwrap().print_stream();
             }
         }
         "2" => {

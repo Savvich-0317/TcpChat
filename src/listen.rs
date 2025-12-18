@@ -3,11 +3,11 @@ use std::{
     net::TcpStream,
 };
 
-pub trait print_stream{
+pub trait PrintStream{
     fn print_stream(&self);
 }
 
-impl print_stream for TcpStream {
+impl PrintStream for TcpStream {
     fn print_stream(&self) {
         let buf_reader = BufReader::new(self);
     
