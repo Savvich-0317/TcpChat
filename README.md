@@ -1,2 +1,2 @@
 # TcpChat
- Small cli chat written on rust.
+ Small cli chat written in rust.
