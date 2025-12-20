@@ -1,26 +1,32 @@
-use std::{ io::Write, net::TcpStream, thread, time::Duration};
+use std::{
+    io::{Write, stdout},
+    net::TcpStream,
+    os::unix::io,
+    thread,
+    time::Duration,
+};
 
 pub struct TcpSender {
-    addr: String,
     pub stream: Option<TcpStream>,
 }
 impl TcpSender {
     pub fn new(addr: String, times: u32) -> Result<TcpSender, String> {
-        let mut sender = TcpSender {
-            addr: addr.clone(),
-            stream: None,
-        };
+        let mut sender = TcpSender { stream: None };
         sender.connect(addr, times)
     }
 
     pub fn connect(mut self, addr: String, times: u32) -> Result<TcpSender, String> {
-        for _ in 0..times {
+        for i in 0..times {
             match TcpStream::connect(&addr) {
                 Ok(stream) => {
                     self.stream = Some(stream);
+                    println!("connected!");
                     return Ok(self);
                 }
-                Err(_) => {}
+                Err(_) => {
+                    print!("connecting to someone...{i}\r");
+                    stdout().flush().unwrap();
+                }
             }
             thread::sleep(Duration::from_secs(1));
         }
