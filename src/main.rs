@@ -1,7 +1,7 @@
 use std::{
     io::{self, BufRead, BufReader, Write},
     net::TcpListener,
-    thread,
+    thread::{self, JoinHandle},
 };
 
 use crate::{listen::PrintStream, sender::TcpSender};
@@ -40,41 +40,55 @@ fn main() {
             println!("who are we? Leave blank if we want only send and not receive");
             std::io::stdin().read_line(&mut addr_us).unwrap();
 
-            let thread_listen = thread::spawn(move || {
-                let listener = TcpListener::bind(addr_us.trim());
-                match listener {
-                    Ok(_) => {
-                        for stream in listener.unwrap().incoming() {
-                            println!("Got stream connection");
-                            stream.unwrap().print_stream();
-                            println!("connection closed");
-                        }
-                        
-                    }
-                    Err(_) => println!(
-                        "This is one sided conversation. You cant receive messages, only send."
-                    ),
-                }
-            });
-            //1212
-            let thread_sender = thread::spawn(move || {
-                let mut sender = TcpSender::new(addr_to.trim().to_string(), 5); //drops stream if goes out of scope
-                match sender {
-                    Ok(_) => loop {
-                        let mut message = "".to_string();
-                        io::stdin().read_line(&mut message).unwrap();
-                        sender.as_mut().unwrap().reply(message.to_string()).unwrap();
-                    },
-                    Err(_) => {
-                        println!(
-                            "seems like its one sided conversation. You can only receive messages."
-                        );
-                    }
-                }
-            });
+            let thread_listen = start_thread_listener(addr_us);
+            let thread_sender = start_thread_sender(addr_to);
+
             thread_listen.join().unwrap();
             thread_sender.join().unwrap();
         }
         &_ => {}
     }
+}
+fn start_thread_listener(addr_us: String) -> JoinHandle<()> {
+    let thread_listen = thread::spawn(move || {
+        let listener = TcpListener::bind(addr_us.trim());
+        match listener {
+            Ok(_) => {
+                for stream in listener.unwrap().incoming() {
+                    println!("Got stream connection");
+                    stream.unwrap().print_stream();
+                    println!("connection closed");
+                }
+            }
+            Err(_) => {
+                if addr_us.trim().is_empty() {
+                    println!(
+                        "This is one sided conversation. You cant receive messages, only send."
+                    )
+                } else {
+                    println!(
+                        "Theres a problem setting up listener, check for address availability."
+                    )
+                }
+            }
+        }
+    });
+    thread_listen
+}
+
+fn start_thread_sender(addr_to: String) -> JoinHandle<()> {
+    let thread_sender = thread::spawn(move || {
+        let mut sender = TcpSender::new(addr_to.trim().to_string(), 5); //drops stream if goes out of scope
+        match sender {
+            Ok(_) => loop {
+                let mut message = "".to_string();
+                io::stdin().read_line(&mut message).unwrap();
+                sender.as_mut().unwrap().reply(message.to_string()).unwrap();
+            },
+            Err(_) => {
+                println!("seems like its one sided conversation. You can only receive messages.");
+            }
+        }
+    });
+    thread_sender
 }
