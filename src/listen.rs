@@ -6,7 +6,9 @@ use std::{
 pub trait PrintStream{
     fn print_stream(&self);
 }
-
+pub trait GetHandshake {
+    fn get_handshake(&self) -> Result<String,String>;
+}
 impl PrintStream for TcpStream {
     fn print_stream(&self) {
         let buf_reader = BufReader::new(self);
@@ -16,6 +18,18 @@ impl PrintStream for TcpStream {
                 Ok(msg) => println!("{}", msg.to_string()),
                 Err(_) => break,
             }
+        }
+    }
+}
+impl GetHandshake for TcpStream {
+    fn get_handshake(&self) -> Result<String,String> {
+        let mut buf_reader = BufReader::new(self);
+        let mut handshake = "".to_string();
+        buf_reader.read_line(&mut handshake).unwrap();
+        if handshake.contains("!Handshake!"){
+            Ok(handshake)
+        }else{
+            Err("no greet".to_string())
         }
     }
 }

@@ -4,12 +4,15 @@ use std::{
     thread::{self, JoinHandle},
 };
 
-use crate::{listen::PrintStream, sender::TcpSender};
+use crate::{listen::{GetHandshake, PrintStream}, sender::TcpSender};
 
 mod listen;
 mod sender;
 fn main() {
+    println!("TcpChat");
+
     println!("choose operation mode 2-sender 1-listener 3 - client + server");
+
     let mut choose = "".to_string();
     io::stdin().read_line(&mut choose).unwrap();
 
@@ -23,6 +26,7 @@ fn main() {
                 println!("connection closed");
             }
         }
+
         "2" => {
             let mut sender = TcpSender::new("localhost:1212".to_string(), 5).unwrap(); //drops stream if goes out of scope
 
@@ -32,6 +36,7 @@ fn main() {
                 sender.reply(message.to_string()).unwrap();
             }
         }
+
         "3" => {
             let mut addr_us = "".to_string(); //localhost:2121
             let mut addr_to = "".to_string(); //localhost:1212
@@ -40,14 +45,36 @@ fn main() {
             println!("who are we? Leave blank if we want only send and not receive");
             std::io::stdin().read_line(&mut addr_us).unwrap();
 
-            let thread_listen = start_thread_listener(addr_us);
-            let thread_sender = start_thread_sender(addr_to);
+            if addr_to.trim().is_empty(){
+                println!("{}",start_listening_handshake(addr_us).unwrap());
 
-            thread_listen.join().unwrap();
-            thread_sender.join().unwrap();
+            }else{
+                let thread_listen = start_thread_listener(addr_us);
+                let thread_sender = start_thread_sender(addr_to);
+
+                thread_listen.join().unwrap();
+                thread_sender.join().unwrap();
+            }
+
+
         }
+
         &_ => {}
     }
+}
+fn start_listening_handshake(addr_us: String) -> Result<String,String>{
+    let listener = TcpListener::bind(addr_us.trim());
+    match listener {
+        Ok(_) => {
+            for stream in listener.unwrap().incoming() {
+                println!("Got stream connection for handshake");
+                println!("handshake connection is closed");
+                return stream.unwrap().get_handshake()
+                
+            }Err("No handshake connection even started".to_string())
+        }
+        Err(_) => Err("No handshake started".to_string())
+    }  
 }
 fn start_thread_listener(addr_us: String) -> JoinHandle<()> {
     let thread_listen = thread::spawn(move || {
@@ -83,7 +110,10 @@ fn start_thread_sender(addr_to: String) -> JoinHandle<()> {
             Ok(_) => loop {
                 let mut message = "".to_string();
                 io::stdin().read_line(&mut message).unwrap();
-                sender.as_mut().unwrap().reply(message.to_string()).unwrap();
+                match sender.as_mut().unwrap().reply(message.to_string()) {
+                    Ok(_) => {}
+                    Err(e) => println!("{e}"),
+                };
             },
             Err(_) => {
                 println!("seems like its one sided conversation. You can only receive messages.");
