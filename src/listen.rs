@@ -3,16 +3,16 @@ use std::{
     net::TcpStream,
 };
 
-pub trait PrintStream{
+pub trait PrintStream {
     fn print_stream(&self);
 }
 pub trait GetHandshake {
-    fn get_handshake(&self) -> Result<String,String>;
+    fn get_handshake(&self) -> Result<String, String>;
 }
 impl PrintStream for TcpStream {
     fn print_stream(&self) {
         let buf_reader = BufReader::new(self);
-    
+
         for line in buf_reader.lines() {
             match line {
                 Ok(msg) => println!("{}", msg.to_string()),
@@ -22,15 +22,14 @@ impl PrintStream for TcpStream {
     }
 }
 impl GetHandshake for TcpStream {
-    fn get_handshake(&self) -> Result<String,String> {
+    fn get_handshake(&self) -> Result<String, String> {
         let mut buf_reader = BufReader::new(self);
         let mut handshake = "".to_string();
         buf_reader.read_line(&mut handshake).unwrap();
-        if handshake.contains("!Handshake!"){
+        if handshake.contains("!Handshake!") {
             Ok(handshake)
-        }else{
+        } else {
             Err("no greet".to_string())
         }
     }
 }
-

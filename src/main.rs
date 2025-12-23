@@ -4,7 +4,10 @@ use std::{
     thread::{self, JoinHandle},
 };
 
-use crate::{listen::{GetHandshake, PrintStream}, sender::TcpSender};
+use crate::{
+    listen::{GetHandshake, PrintStream},
+    sender::TcpSender,
+};
 
 mod listen;
 mod sender;
@@ -40,41 +43,49 @@ fn main() {
         "3" => {
             let mut addr_us = "".to_string(); //localhost:2121
             let mut addr_to = "".to_string(); //localhost:1212
-            println!("who is we chatting with? Leave blank if we want only receive");
+            println!("who is we chatting with? Leave blank if we want use handshake");
             std::io::stdin().read_line(&mut addr_to).unwrap();
-            println!("who are we? Leave blank if we want only send and not receive");
+            println!("who are we?");
             std::io::stdin().read_line(&mut addr_us).unwrap();
 
-            if addr_to.trim().is_empty(){
-                println!("{}",start_listening_handshake(addr_us).unwrap());
-
-            }else{
-                let thread_listen = start_thread_listener(addr_us);
-                let thread_sender = start_thread_sender(addr_to);
-
+            if addr_to.trim().is_empty() {
+                println!("{}", start_listening_handshake(addr_us).unwrap());
+            } else {
+                let thread_listen = start_thread_listener(addr_us.clone());
+                //let thread_sender = start_thread_sender(addr_to);
+                send_handshake(addr_to, addr_us).unwrap();
                 thread_listen.join().unwrap();
-                thread_sender.join().unwrap();
+                //thread_sender.join().unwrap();
             }
-
-
         }
 
         &_ => {}
     }
 }
-fn start_listening_handshake(addr_us: String) -> Result<String,String>{
+fn send_handshake(addr_to: String, addr_us: String) -> Result<(), String> {
+    let mut sender = TcpSender::new(addr_to.trim().to_string(), 60);
+    match sender {
+        Ok(mut stream) => {
+        stream.reply(format!("!Handshake! my listener:{addr_us}:").to_string()).unwrap();
+            Ok(())
+        }
+        Err(e) => Err(e),
+    }
+}
+
+fn start_listening_handshake(addr_us: String) -> Result<String, String> {
     let listener = TcpListener::bind(addr_us.trim());
     match listener {
         Ok(_) => {
             for stream in listener.unwrap().incoming() {
                 println!("Got stream connection for handshake");
-                println!("handshake connection is closed");
-                return stream.unwrap().get_handshake()
-                
-            }Err("No handshake connection even started".to_string())
+
+                return stream.unwrap().get_handshake();
+            }
+            Err("No handshake connection even started".to_string())
         }
-        Err(_) => Err("No handshake started".to_string())
-    }  
+        Err(_) => Err("No handshake started".to_string()),
+    }
 }
 fn start_thread_listener(addr_us: String) -> JoinHandle<()> {
     let thread_listen = thread::spawn(move || {
@@ -105,7 +116,7 @@ fn start_thread_listener(addr_us: String) -> JoinHandle<()> {
 
 fn start_thread_sender(addr_to: String) -> JoinHandle<()> {
     let thread_sender = thread::spawn(move || {
-        let mut sender = TcpSender::new(addr_to.trim().to_string(), 5); //drops stream if goes out of scope
+        let mut sender = TcpSender::new(addr_to.trim().to_string(), 60); //drops stream if goes out of scope
         match sender {
             Ok(_) => loop {
                 let mut message = "".to_string();
