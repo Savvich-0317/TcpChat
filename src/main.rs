@@ -49,13 +49,28 @@ fn main() {
             std::io::stdin().read_line(&mut addr_us).unwrap();
 
             if addr_to.trim().is_empty() {
-                println!("{}", start_listening_handshake(addr_us).unwrap());
-            } else {
+                let handshake = start_listening_handshake(addr_us.clone()).unwrap();
+                let addr_to = &handshake.as_str()[11..];
+                println!("Got fellow listener! {addr_to}");
+
                 let thread_listen = start_thread_listener(addr_us.clone());
-                //let thread_sender = start_thread_sender(addr_to);
-                send_handshake(addr_to, addr_us).unwrap();
+                let thread_sender = start_thread_sender(addr_to.to_string());
+                
                 thread_listen.join().unwrap();
-                //thread_sender.join().unwrap();
+                thread_sender.join().unwrap();
+                
+                
+            } else {
+                //let thread_sender = start_thread_sender(addr_to);
+                println!("Sending handshake");
+                send_handshake(addr_to.clone(), addr_us.clone()).unwrap();
+                println!("Sended waiting for response with connection");
+
+                let thread_listen = start_thread_listener(addr_us.clone());
+                let thread_sender = start_thread_sender(addr_to);
+                
+                thread_listen.join().unwrap();
+                thread_sender.join().unwrap();
             }
         }
 
@@ -66,7 +81,9 @@ fn send_handshake(addr_to: String, addr_us: String) -> Result<(), String> {
     let mut sender = TcpSender::new(addr_to.trim().to_string(), 60);
     match sender {
         Ok(mut stream) => {
-        stream.reply(format!("!Handshake! my listener:{addr_us}:").to_string()).unwrap();
+            stream
+                .reply(format!("!Handshake!{addr_us}").to_string())
+                .unwrap();
             Ok(())
         }
         Err(e) => Err(e),
