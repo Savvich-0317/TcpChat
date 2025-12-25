@@ -55,20 +55,19 @@ fn main() {
 
                 let thread_listen = start_thread_listener(addr_us.clone());
                 let thread_sender = start_thread_sender(addr_to.to_string());
-                
+
                 thread_listen.join().unwrap();
                 thread_sender.join().unwrap();
-                
                 
             } else {
                 //let thread_sender = start_thread_sender(addr_to);
                 println!("Sending handshake");
+                let thread_listen = start_thread_listener(addr_us.clone());
                 send_handshake(addr_to.clone(), addr_us.clone()).unwrap();
                 println!("Sended waiting for response with connection");
 
-                let thread_listen = start_thread_listener(addr_us.clone());
                 let thread_sender = start_thread_sender(addr_to);
-                
+
                 thread_listen.join().unwrap();
                 thread_sender.join().unwrap();
             }
@@ -94,6 +93,7 @@ fn start_listening_handshake(addr_us: String) -> Result<String, String> {
     let listener = TcpListener::bind(addr_us.trim());
     match listener {
         Ok(_) => {
+            println!("Waiting for handshake");
             for stream in listener.unwrap().incoming() {
                 println!("Got stream connection for handshake");
 
