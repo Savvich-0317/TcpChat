@@ -1,4 +1,5 @@
 use std::{
+    clone,
     io::{self, BufRead, BufReader, Write},
     net::TcpListener,
     thread::{self, JoinHandle},
@@ -49,23 +50,32 @@ fn main() {
             std::io::stdin().read_line(&mut addr_us).unwrap();
 
             if addr_to.trim().is_empty() {
-                let handshake = start_listening_handshake(addr_us.clone()).unwrap();
+                let handshake = start_listening_handshake(addr_us.as_str()).unwrap();
                 let addr_to = &handshake.as_str()[11..];
-                println!("Got fellow listener! {addr_to}");
-
+                println!("gotted handshake! {addr_to}");
+                send_handshake(addr_to.to_string(), addr_us.clone()).unwrap();
+                println!("sended handshake");
+                
                 let thread_listen = start_thread_listener(addr_us.clone());
                 let thread_sender = start_thread_sender(addr_to.to_string());
 
                 thread_listen.join().unwrap();
                 thread_sender.join().unwrap();
-                
             } else {
                 //let thread_sender = start_thread_sender(addr_to);
                 println!("Sending handshake");
-                let thread_listen = start_thread_listener(addr_us.clone());
-                send_handshake(addr_to.clone(), addr_us.clone()).unwrap();
-                println!("Sended waiting for response with connection");
+                let addr_us_clone = addr_us.clone();
 
+                let handshake_thread = thread::spawn(move || {
+                    start_listening_handshake(addr_us_clone.as_str()).unwrap()
+                });
+                send_handshake(addr_to.clone(), addr_us.clone()).unwrap();
+                println!("sended handshake");
+                let handshake = handshake_thread.join().unwrap();
+                println!("gotted handshake");
+                println!("{handshake}");
+
+                let thread_listen = start_thread_listener(addr_us.clone());
                 let thread_sender = start_thread_sender(addr_to);
 
                 thread_listen.join().unwrap();
@@ -89,7 +99,7 @@ fn send_handshake(addr_to: String, addr_us: String) -> Result<(), String> {
     }
 }
 
-fn start_listening_handshake(addr_us: String) -> Result<String, String> {
+fn start_listening_handshake(addr_us: &str) -> Result<String, String> {
     let listener = TcpListener::bind(addr_us.trim());
     match listener {
         Ok(_) => {
