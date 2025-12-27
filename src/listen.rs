@@ -35,6 +35,7 @@ impl GetHandshake for TcpStream {
         let mut handshake = "".to_string();
         buf_reader.read_line(&mut handshake).unwrap();
         if handshake.contains("!Handshake!") {
+            //println!("GETHANDSHAKE DEBUG {handshake}");
             Ok(handshake)
         } else {
             Err("no greet".to_string())

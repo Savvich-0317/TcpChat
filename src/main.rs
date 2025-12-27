@@ -1,8 +1,5 @@
 use std::{
-    clone,
-    io::{self, BufRead, BufReader, Write},
-    net::TcpListener,
-    thread::{self, JoinHandle},
+    clone, fs, io::{self, BufRead, BufReader, Write}, net::TcpListener, thread::{self, JoinHandle}
 };
 
 use crate::{
@@ -14,7 +11,20 @@ mod listen;
 mod sender;
 fn main() {
     println!("TcpChat");
-
+    
+    let mut private = "";
+    match fs::read_to_string("keys"){
+        Ok(text) =>  private = text.as_str(),
+        Err(_) => println!("There is no RSA private key in running dir, there will be no decryption.")
+    }
+    
+    let mut public = "".to_string();
+    match fs::read_to_string("keys.pub"){
+        Ok(text) =>  public = text,
+        Err(_) => println!("There is no RSA public key in running dir, there will be no encryption.")
+    }
+    
+    
     println!("choose operation mode 2-sender 1-listener 3 - client + server");
 
     let mut choose = "".to_string();
@@ -51,9 +61,10 @@ fn main() {
 
             if addr_to.trim().is_empty() {
                 let handshake = start_listening_handshake(addr_us.as_str()).unwrap();
-                let addr_to = &handshake.as_str()[11..];
+                let begin_public = handshake.find("public:").unwrap();
+                let addr_to = &handshake.as_str()[14..begin_public];
                 println!("gotted handshake! {addr_to}");
-                send_handshake(addr_to.to_string(), addr_us.clone()).unwrap();
+                send_handshake(addr_to.to_string(), addr_us.clone(),public).unwrap();
                 println!("sended handshake");
                 
                 let thread_listen = start_thread_listener(addr_us.clone());
@@ -69,7 +80,7 @@ fn main() {
                 let handshake_thread = thread::spawn(move || {
                     start_listening_handshake(addr_us_clone.as_str()).unwrap()
                 });
-                send_handshake(addr_to.clone(), addr_us.clone()).unwrap();
+                send_handshake(addr_to.clone(), addr_us.clone(),public).unwrap();
                 println!("sended handshake");
                 let handshake = handshake_thread.join().unwrap();
                 println!("gotted handshake");
@@ -86,12 +97,13 @@ fn main() {
         &_ => {}
     }
 }
-fn send_handshake(addr_to: String, addr_us: String) -> Result<(), String> {
+fn send_handshake(addr_to: String, addr_us: String, public_key: String) -> Result<(), String> {
     let mut sender = TcpSender::new(addr_to.trim().to_string(), 60);
+    let handshake = format!("!Handshake!ip:{}public:{}",addr_us.trim(),public_key.trim()).to_string();
     match sender {
         Ok(mut stream) => {
             stream
-                .reply(format!("!Handshake!{addr_us}").to_string())
+                .reply(handshake)
                 .unwrap();
             Ok(())
         }
@@ -106,7 +118,7 @@ fn start_listening_handshake(addr_us: &str) -> Result<String, String> {
             println!("Waiting for handshake");
             for stream in listener.unwrap().incoming() {
                 println!("Got stream connection for handshake");
-
+                
                 return stream.unwrap().get_handshake();
             }
             Err("No handshake connection even started".to_string())
