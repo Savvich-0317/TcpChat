@@ -1,6 +1,10 @@
 use std::{
     clone, fs, io::{self, BufRead, BufReader, Write}, net::TcpListener, thread::{self, JoinHandle}
 };
+use base64::{engine::general_purpose, Engine as _};
+
+use rsa::{Oaep, RsaPrivateKey, RsaPublicKey, pkcs8::{DecodePrivateKey, DecodePublicKey}, rand_core::OsRng};
+use sha2::Sha256;
 
 use crate::{
     listen::{GetHandshake, PrintStream},
@@ -11,19 +15,35 @@ mod listen;
 mod sender;
 fn main() {
     println!("TcpChat");
+    let mut rng = OsRng;
     
-    let mut private = "";
-    match fs::read_to_string("keys"){
-        Ok(text) =>  private = text.as_str(),
+    //ssh-keygen -t rsa -b 4096 -m PKCS8 -f rsa_key -N ""
+    let mut private = "".to_string();
+    match fs::read_to_string("rsa_key"){
+        Ok(text) =>  private = text.to_string(),
         Err(_) => println!("There is no RSA private key in running dir, there will be no decryption.")
     }
     
     let mut public = "".to_string();
-    match fs::read_to_string("keys.pub"){
+    match fs::read_to_string("rsa_key_public.pem"){
         Ok(text) =>  public = text,
         Err(_) => println!("There is no RSA public key in running dir, there will be no encryption.")
     }
     
+    let priv_key = RsaPrivateKey::from_pkcs8_pem(private.as_str()).expect("unable to read priv_key");
+    let pub_key = RsaPublicKey::from_public_key_pem(public.as_str()).expect("unable to read pub_key");
+    
+    
+    //encrypt
+    let message = "Aboba".as_bytes();
+    let encrypted = pub_key.encrypt(&mut rng, Oaep::new::<Sha256>(), message).unwrap();
+        let encrypted_b64 = general_purpose::STANDARD.encode(&encrypted);
+        println!("Encrypt:{}", encrypted_b64);
+    
+        //decrypt
+        let decrypted = priv_key.decrypt(Oaep::new::<Sha256>(), &encrypted).unwrap();
+        println!("Decrypt: {}", String::from_utf8(decrypted).unwrap());
+
     
     println!("choose operation mode 2-sender 1-listener 3 - client + server");
 
@@ -58,7 +78,9 @@ fn main() {
             std::io::stdin().read_line(&mut addr_to).unwrap();
             println!("who are we?");
             std::io::stdin().read_line(&mut addr_us).unwrap();
-
+            addr_to = addr_to.trim().to_string();
+            addr_us = addr_us.trim().to_string();
+            
             if addr_to.trim().is_empty() {
                 let handshake = start_listening_handshake(addr_us.as_str()).unwrap();
                 let begin_public = handshake.find("public:").unwrap();
@@ -98,8 +120,8 @@ fn main() {
     }
 }
 fn send_handshake(addr_to: String, addr_us: String, public_key: String) -> Result<(), String> {
-    let mut sender = TcpSender::new(addr_to.trim().to_string(), 60);
-    let handshake = format!("!Handshake!ip:{}public:{}",addr_us.trim(),public_key.trim()).to_string();
+    let mut sender = TcpSender::new(addr_to.to_string(), 60);
+    let handshake = format!("!Handshake!ip:{}public:{}",addr_us,public_key.trim()).to_string();
     match sender {
         Ok(mut stream) => {
             stream
@@ -112,7 +134,7 @@ fn send_handshake(addr_to: String, addr_us: String, public_key: String) -> Resul
 }
 
 fn start_listening_handshake(addr_us: &str) -> Result<String, String> {
-    let listener = TcpListener::bind(addr_us.trim());
+    let listener = TcpListener::bind(addr_us);
     match listener {
         Ok(_) => {
             println!("Waiting for handshake");
@@ -128,7 +150,7 @@ fn start_listening_handshake(addr_us: &str) -> Result<String, String> {
 }
 fn start_thread_listener(addr_us: String) -> JoinHandle<()> {
     let thread_listen = thread::spawn(move || {
-        let listener = TcpListener::bind(addr_us.trim());
+        let listener = TcpListener::bind(addr_us.clone());
         match listener {
             Ok(_) => {
                 for stream in listener.unwrap().incoming() {
@@ -138,7 +160,7 @@ fn start_thread_listener(addr_us: String) -> JoinHandle<()> {
                 }
             }
             Err(_) => {
-                if addr_us.trim().is_empty() {
+                if addr_us.clone().is_empty() {
                     println!(
                         "This is one sided conversation. You cant receive messages, only send."
                     )

@@ -4,4 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+base64 = "0.22.1"
+rand = "0.9.2"
+rsa = "0.9.9"
+sha2 = "0.10.9"
 term_size = "0.3.2"

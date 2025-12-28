@@ -16,14 +16,24 @@ impl PrintStream for TcpStream {
 
         for line in buf_reader.lines() {
             match line {
-                Ok(msg) => println!(
-                    "{}",
-                    msg.to_string()
-                        + " "
-                            .repeat(term_size::dimensions().unwrap().0 - msg.len() - status.len())
-                            .as_str()
-                        + status
-                ),
+                Ok(msg) => {
+                    if (msg.len() < term_size::dimensions().unwrap().0 - status.len()) {
+                        println!(
+                            "{}",
+                            msg.to_string()
+                                + " "
+                                    .repeat(
+                                        term_size::dimensions().unwrap().0
+                                            - msg.len()
+                                            - status.len()
+                                    )
+                                    .as_str()
+                                + status
+                        )
+                    } else {
+                        println!("{msg}   {status}");
+                    }
+                }
                 Err(_) => break,
             }
         }
