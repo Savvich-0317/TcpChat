@@ -1,9 +1,16 @@
+use base64::{Engine as _, engine::general_purpose};
 use std::{
-    clone, fs, io::{self, BufRead, BufReader, Write}, net::TcpListener, thread::{self, JoinHandle}
+    clone, fs,
+    io::{self, BufRead, BufReader, Write},
+    net::TcpListener,
+    thread::{self, JoinHandle},
 };
-use base64::{engine::general_purpose, Engine as _};
 
-use rsa::{Oaep, RsaPrivateKey, RsaPublicKey, pkcs8::{DecodePrivateKey, DecodePublicKey}, rand_core::OsRng};
+use rsa::{
+    Oaep, RsaPrivateKey, RsaPublicKey,
+    pkcs8::{DecodePrivateKey, DecodePublicKey},
+    rand_core::OsRng,
+};
 use sha2::Sha256;
 
 use crate::{
@@ -16,35 +23,41 @@ mod sender;
 fn main() {
     println!("TcpChat");
     let mut rng = OsRng;
-    
+
     //ssh-keygen -t rsa -b 4096 -m PKCS8 -f rsa_key -N ""
     let mut private = "".to_string();
-    match fs::read_to_string("rsa_key"){
-        Ok(text) =>  private = text.to_string(),
-        Err(_) => println!("There is no RSA private key in running dir, there will be no decryption.")
+    match fs::read_to_string("rsa_key") {
+        Ok(text) => private = text.to_string(),
+        Err(_) => {
+            println!("There is no RSA private key in running dir, there will be no decryption.")
+        }
     }
-    
+
     let mut public = "".to_string();
-    match fs::read_to_string("rsa_key_public.pem"){
-        Ok(text) =>  public = text,
-        Err(_) => println!("There is no RSA public key in running dir, there will be no encryption.")
+    match fs::read_to_string("rsa_key_public.pem") {
+        Ok(text) => public = text,
+        Err(_) => {
+            println!("There is no RSA public key in running dir, there will be no encryption.")
+        }
     }
-    
-    let priv_key = RsaPrivateKey::from_pkcs8_pem(private.as_str()).expect("unable to read priv_key");
-    let pub_key = RsaPublicKey::from_public_key_pem(public.as_str()).expect("unable to read pub_key");
-    
-    
+
+    let priv_key =
+        RsaPrivateKey::from_pkcs8_pem(private.as_str()).expect("unable to read priv_key");
+    let pub_key =
+        RsaPublicKey::from_public_key_pem(public.as_str()).expect("unable to read pub_key");
+
     //encrypt
     let message = "Aboba".as_bytes();
-    let encrypted = pub_key.encrypt(&mut rng, Oaep::new::<Sha256>(), message).unwrap();
-        let encrypted_b64 = general_purpose::STANDARD.encode(&encrypted);
-        println!("Encrypt:{}", encrypted_b64);
-    
-        //decrypt
-        let decrypted = priv_key.decrypt(Oaep::new::<Sha256>(), &encrypted).unwrap();
-        println!("Decrypt: {}", String::from_utf8(decrypted).unwrap());
+    let encrypted = pub_key
+        .encrypt(&mut rng, Oaep::new::<Sha256>(), message)
+        .unwrap();
+    let encrypted_b64 = general_purpose::STANDARD.encode(&encrypted);
+    println!("Encrypt:{}", encrypted_b64);
 
-    
+    //decrypt
+    let decrypted = priv_key.decrypt(Oaep::new::<Sha256>(), &encrypted).unwrap();
+    println!("Decrypt: {}", String::from_utf8(decrypted).unwrap());
+
     println!("choose operation mode 2-sender 1-listener 3 - client + server");
 
     let mut choose = "".to_string();
@@ -80,15 +93,19 @@ fn main() {
             std::io::stdin().read_line(&mut addr_us).unwrap();
             addr_to = addr_to.trim().to_string();
             addr_us = addr_us.trim().to_string();
-            
+
             if addr_to.trim().is_empty() {
                 let handshake = start_listening_handshake(addr_us.as_str()).unwrap();
                 let begin_public = handshake.find("public:").unwrap();
                 let addr_to = &handshake.as_str()[14..begin_public];
-                println!("gotted handshake! {addr_to}");
-                send_handshake(addr_to.to_string(), addr_us.clone(),public).unwrap();
+                let public_conv = &handshake.as_str()[begin_public + 8..&handshake.len() - 1];
+                println!(
+                    "gotted handshake! from {addr_to}\nand public {}",
+                    public_conv
+                );
+                send_handshake(addr_to.to_string(), addr_us.clone(), public).unwrap();
                 println!("sended handshake");
-                
+
                 let thread_listen = start_thread_listener(addr_us.clone());
                 let thread_sender = start_thread_sender(addr_to.to_string());
 
@@ -102,14 +119,22 @@ fn main() {
                 let handshake_thread = thread::spawn(move || {
                     start_listening_handshake(addr_us_clone.as_str()).unwrap()
                 });
-                send_handshake(addr_to.clone(), addr_us.clone(),public).unwrap();
+                send_handshake(addr_to.clone(), addr_us.clone(), public.clone()).unwrap();
                 println!("sended handshake");
+
                 let handshake = handshake_thread.join().unwrap();
-                println!("gotted handshake");
-                println!("{handshake}");
+                let begin_public = handshake.find("public:").unwrap();
+                let addr_to = &handshake.as_str()[14..begin_public];
+                let public_conv = &handshake.as_str()[begin_public + 8..&handshake.len() - 1];
+                println!(
+                    "gotted handshake! from {addr_to}\nand public {}",
+                    public_conv
+                );
+
+                println!("to {addr_to} us {addr_us}");
 
                 let thread_listen = start_thread_listener(addr_us.clone());
-                let thread_sender = start_thread_sender(addr_to);
+                let thread_sender = start_thread_sender(addr_to.to_string());
 
                 thread_listen.join().unwrap();
                 thread_sender.join().unwrap();
@@ -121,12 +146,10 @@ fn main() {
 }
 fn send_handshake(addr_to: String, addr_us: String, public_key: String) -> Result<(), String> {
     let mut sender = TcpSender::new(addr_to.to_string(), 60);
-    let handshake = format!("!Handshake!ip:{}public:{}",addr_us,public_key.trim()).to_string();
+    let handshake = format!("!Handshake!ip:{}public:{:?}", addr_us, public_key.trim()).to_string();
     match sender {
         Ok(mut stream) => {
-            stream
-                .reply(handshake)
-                .unwrap();
+            stream.reply(handshake).unwrap();
             Ok(())
         }
         Err(e) => Err(e),
@@ -140,7 +163,7 @@ fn start_listening_handshake(addr_us: &str) -> Result<String, String> {
             println!("Waiting for handshake");
             for stream in listener.unwrap().incoming() {
                 println!("Got stream connection for handshake");
-                
+
                 return stream.unwrap().get_handshake();
             }
             Err("No handshake connection even started".to_string())
