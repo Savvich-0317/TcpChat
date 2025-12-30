@@ -22,7 +22,6 @@ mod listen;
 mod sender;
 fn main() {
     println!("TcpChat");
-    let mut rng = OsRng;
 
     //ssh-keygen -t rsa -b 4096 -m PKCS8 -f rsa_key -N ""
     let mut private = "".to_string();
@@ -41,22 +40,10 @@ fn main() {
         }
     }
 
-    let priv_key =
-        RsaPrivateKey::from_pkcs8_pem(private.as_str()).expect("unable to read priv_key");
-    let pub_key =
-        RsaPublicKey::from_public_key_pem(public.as_str()).expect("unable to read pub_key");
-
-    //encrypt
-    let message = "Aboba".as_bytes();
-    let encrypted = pub_key
-        .encrypt(&mut rng, Oaep::new::<Sha256>(), message)
-        .unwrap();
-    let encrypted_b64 = general_purpose::STANDARD.encode(&encrypted);
-    println!("Encrypt:{}", encrypted_b64);
-
-    //decrypt
-    let decrypted = priv_key.decrypt(Oaep::new::<Sha256>(), &encrypted).unwrap();
-    println!("Decrypt: {}", String::from_utf8(decrypted).unwrap());
+    let message = "lol aboba";
+    let encrypt = encrypt_message(message.to_string(), public.clone());
+    println!("{}", encrypt);
+    println!("{}", decrypt_message(encrypt, private));
 
     println!("choose operation mode 2-sender 1-listener 3 - client + server");
 
@@ -144,6 +131,28 @@ fn main() {
         &_ => {}
     }
 }
+fn encrypt_message(message: String, public_to: String) -> String {
+    let pub_key =
+        RsaPublicKey::from_public_key_pem(public_to.as_str()).expect("unable to read pub_key");
+    let mut rng = OsRng;
+    let encrypted = pub_key
+        .encrypt(&mut rng, Oaep::new::<Sha256>(), message.as_bytes())
+        .unwrap();
+    let encrypted_b64 = general_purpose::STANDARD.encode(&encrypted);
+    encrypted_b64
+}
+fn decrypt_message(message: String, private_us: String) -> String {
+    let decrypted_b64 = general_purpose::STANDARD
+        .decode(&message)
+        .expect("Failed to decode base64");
+    let priv_key =
+        RsaPrivateKey::from_pkcs8_pem(private_us.as_str()).expect("unable to read priv_key");
+    let decrypted = priv_key
+        .decrypt(Oaep::new::<Sha256>(), &decrypted_b64)
+        .unwrap();
+    String::from_utf8(decrypted).unwrap()
+}
+
 fn send_handshake(addr_to: String, addr_us: String, public_key: String) -> Result<(), String> {
     let mut sender = TcpSender::new(addr_to.to_string(), 60);
     let handshake = format!("!Handshake!ip:{}public:{:?}", addr_us, public_key.trim()).to_string();
