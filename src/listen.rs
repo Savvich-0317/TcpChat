@@ -3,20 +3,26 @@ use std::{
     net::TcpStream,
 };
 use term_size;
+
+use crate::decrypt_message;
 pub trait PrintStream {
-    fn print_stream(&self);
+    fn print_stream(&self, private_us: String);
 }
 pub trait GetHandshake {
     fn get_handshake(&self) -> Result<String, String>;
 }
 impl PrintStream for TcpStream {
-    fn print_stream(&self) {
-        let status = "//from conversator";
+    fn print_stream(&self, private_us: String) {
+        let mut status = "//from conversator";
         let buf_reader = BufReader::new(self);
-
+        let private = private_us.clone();
         for line in buf_reader.lines() {
             match line {
-                Ok(msg) => {
+                Ok(mut msg) => {
+                    if !private.clone().is_empty() {
+                        msg = decrypt_message(msg.clone(), private.clone()).trim().to_string();
+                        status = "//decrypted / from convensator";
+                    }
                     if (msg.len() < term_size::dimensions().unwrap().0 - status.len()) {
                         println!(
                             "{}",

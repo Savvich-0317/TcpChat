@@ -43,7 +43,7 @@ fn main() {
     let message = "lol aboba";
     let encrypt = encrypt_message(message.to_string(), public.clone());
     println!("{}", encrypt);
-    println!("{}", decrypt_message(encrypt, private));
+    println!("{}", decrypt_message(encrypt, private.clone()));
 
     println!("choose operation mode 2-sender 1-listener 3 - client + server");
 
@@ -56,7 +56,7 @@ fn main() {
 
             for mut stream in listener.incoming() {
                 println!("Got stream connection");
-                stream.unwrap().print_stream();
+                stream.unwrap().print_stream(private.clone());
                 println!("connection closed");
             }
         }
@@ -85,16 +85,18 @@ fn main() {
                 let handshake = start_listening_handshake(addr_us.as_str()).unwrap();
                 let begin_public = handshake.find("public:").unwrap();
                 let addr_to = &handshake.as_str()[14..begin_public];
-                let public_conv = &handshake.as_str()[begin_public + 8..&handshake.len() - 1];
+                let public_conv = &handshake.as_str()[begin_public + 8..&handshake.len() - 1]
+                    .replace("\\n", "\n");
                 println!(
                     "gotted handshake! from {addr_to}\nand public {}",
                     public_conv
                 );
-                send_handshake(addr_to.to_string(), addr_us.clone(), public).unwrap();
+                println!("{}", public_conv);
+                send_handshake(addr_to.to_string(), addr_us.clone(), public.clone()).unwrap();
                 println!("sended handshake");
 
-                let thread_listen = start_thread_listener(addr_us.clone());
-                let thread_sender = start_thread_sender(addr_to.to_string());
+                let thread_listen = start_thread_listener(addr_us.clone(),private.clone());
+                let thread_sender = start_thread_sender(addr_to.to_string(), public_conv.clone());
 
                 thread_listen.join().unwrap();
                 thread_sender.join().unwrap();
@@ -112,7 +114,8 @@ fn main() {
                 let handshake = handshake_thread.join().unwrap();
                 let begin_public = handshake.find("public:").unwrap();
                 let addr_to = &handshake.as_str()[14..begin_public];
-                let public_conv = &handshake.as_str()[begin_public + 8..&handshake.len() - 1];
+                let public_conv = &handshake.as_str()[begin_public + 8..&handshake.len() - 1]
+                    .replace("\\n", "\n");
                 println!(
                     "gotted handshake! from {addr_to}\nand public {}",
                     public_conv
@@ -120,8 +123,9 @@ fn main() {
 
                 println!("to {addr_to} us {addr_us}");
 
-                let thread_listen = start_thread_listener(addr_us.clone());
-                let thread_sender = start_thread_sender(addr_to.to_string());
+                let thread_listen = start_thread_listener(addr_us.clone(),private.clone());
+                let thread_sender =
+                    start_thread_sender(addr_to.to_string(), public_conv.to_string());
 
                 thread_listen.join().unwrap();
                 thread_sender.join().unwrap();
@@ -180,14 +184,14 @@ fn start_listening_handshake(addr_us: &str) -> Result<String, String> {
         Err(_) => Err("No handshake started".to_string()),
     }
 }
-fn start_thread_listener(addr_us: String) -> JoinHandle<()> {
+fn start_thread_listener(addr_us: String, private_us: String) -> JoinHandle<()> {
     let thread_listen = thread::spawn(move || {
         let listener = TcpListener::bind(addr_us.clone());
         match listener {
             Ok(_) => {
                 for stream in listener.unwrap().incoming() {
                     println!("Got stream connection");
-                    stream.unwrap().print_stream();
+                    stream.unwrap().print_stream(private_us.clone());
                     println!("connection closed");
                 }
             }
@@ -207,14 +211,18 @@ fn start_thread_listener(addr_us: String) -> JoinHandle<()> {
     thread_listen
 }
 
-fn start_thread_sender(addr_to: String) -> JoinHandle<()> {
+fn start_thread_sender(addr_to: String, public_to: String) -> JoinHandle<()> {
     let thread_sender = thread::spawn(move || {
         let mut sender = TcpSender::new(addr_to.trim().to_string(), 60); //drops stream if goes out of scope
         match sender {
             Ok(_) => loop {
                 let mut message = "".to_string();
                 io::stdin().read_line(&mut message).unwrap();
-                match sender.as_mut().unwrap().reply(message.to_string()) {
+                match sender
+                    .as_mut()
+                    .unwrap()
+                    .reply(encrypt_message(message, public_to.clone()) + "\n")
+                {
                     Ok(_) => {}
                     Err(e) => println!("{e}"),
                 };
