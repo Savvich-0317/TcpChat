@@ -39,12 +39,12 @@ fn main() {
             println!("There is no RSA public key in running dir, there will be no encryption.")
         }
     }
-
-    let message = "lol aboba";
-    let encrypt = encrypt_message(message.to_string(), public.clone());
-    println!("{}", encrypt);
-    println!("{}", decrypt_message(encrypt, private.clone()));
-
+    /*
+            let message = "lol aboba";
+            let encrypt = encrypt_message(message.to_string(), public.clone());
+            println!("{}", encrypt);
+            println!("{}", decrypt_message(encrypt, private.clone()));
+    */
     println!("choose operation mode 2-sender 1-listener 3 - client + server");
 
     let mut choose = "".to_string();
@@ -95,7 +95,7 @@ fn main() {
                 send_handshake(addr_to.to_string(), addr_us.clone(), public.clone()).unwrap();
                 println!("sended handshake");
 
-                let thread_listen = start_thread_listener(addr_us.clone(),private.clone());
+                let thread_listen = start_thread_listener(addr_us.clone(), private.clone());
                 let thread_sender = start_thread_sender(addr_to.to_string(), public_conv.clone());
 
                 thread_listen.join().unwrap();
@@ -123,7 +123,7 @@ fn main() {
 
                 println!("to {addr_to} us {addr_us}");
 
-                let thread_listen = start_thread_listener(addr_us.clone(),private.clone());
+                let thread_listen = start_thread_listener(addr_us.clone(), private.clone());
                 let thread_sender =
                     start_thread_sender(addr_to.to_string(), public_conv.to_string());
 
@@ -136,6 +136,9 @@ fn main() {
     }
 }
 fn encrypt_message(message: String, public_to: String) -> String {
+    if (public_to.is_empty()){
+        return message.trim().to_string()
+    }
     let pub_key =
         RsaPublicKey::from_public_key_pem(public_to.as_str()).expect("unable to read pub_key");
     let mut rng = OsRng;

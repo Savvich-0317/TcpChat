@@ -20,24 +20,23 @@ impl PrintStream for TcpStream {
             match line {
                 Ok(mut msg) => {
                     if !private.clone().is_empty() {
-                        msg = decrypt_message(msg.clone(), private.clone()).trim().to_string();
+                        msg = decrypt_message(msg.clone(), private.clone())
+                            .trim()
+                            .to_string();
                         status = "//decrypted / from convensator";
                     }
-                    if (msg.len() < term_size::dimensions().unwrap().0 - status.len()) {
+                    let width = term_size::dimensions().unwrap().0;
+                    if msg.len() % width < width - status.len() {
                         println!(
                             "{}",
                             msg.to_string()
                                 + " "
-                                    .repeat(
-                                        term_size::dimensions().unwrap().0
-                                            - msg.len()
-                                            - status.len()
-                                    )
+                                    .repeat(width - msg.len() % width - status.len())
                                     .as_str()
                                 + status
                         )
                     } else {
-                        println!("{msg}   {status}");
+                        println!("{msg}\n{}{status}", " ".repeat(width - status.len()));
                     }
                 }
                 Err(_) => break,
