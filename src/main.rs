@@ -4,6 +4,7 @@ use std::{
     io::{self, BufRead, BufReader, Write},
     net::TcpListener,
     thread::{self, JoinHandle},
+    time::Instant,
 };
 
 use rsa::{
@@ -28,7 +29,7 @@ fn main() {
     match fs::read_to_string("rsa_key") {
         Ok(text) => private = text.to_string(),
         Err(_) => {
-            println!("There is no RSA private key in running dir, there will be no decryption.")
+            println!("There is no RSA private key in running dir.")
         }
     }
 
@@ -36,8 +37,16 @@ fn main() {
     match fs::read_to_string("rsa_key_public.pem") {
         Ok(text) => public = text,
         Err(_) => {
-            println!("There is no RSA public key in running dir, there will be no encryption.")
+            println!("There is no RSA public key in running dir.")
         }
+    }
+
+    if (!public.is_empty() && !private.is_empty()) {
+        println!("There is rsa keys! We will try to run encryption!");
+    } else {
+        println!(
+            "There is no encryption keys! You can generate pair with generate_my_keys.sh in directory!"
+        );
     }
     /*
             let message = "lol aboba";
@@ -83,6 +92,7 @@ fn main() {
 
             if addr_to.trim().is_empty() {
                 let handshake = start_listening_handshake(addr_us.as_str()).unwrap();
+                let timer = Instant::now();
                 let begin_public = handshake.find("public:").unwrap();
                 let addr_to = &handshake.as_str()[14..begin_public];
                 let public_conv = &handshake.as_str()[begin_public + 8..&handshake.len() - 1]
@@ -98,6 +108,8 @@ fn main() {
                 let thread_listen = start_thread_listener(addr_us.clone(), private.clone());
                 let thread_sender = start_thread_sender(addr_to.to_string(), public_conv.clone());
 
+                println!("time spended for connect {}sec", timer.elapsed().as_secs());
+
                 thread_listen.join().unwrap();
                 thread_sender.join().unwrap();
             } else {
@@ -112,6 +124,7 @@ fn main() {
                 println!("sended handshake");
 
                 let handshake = handshake_thread.join().unwrap();
+                let timer = Instant::now();
                 let begin_public = handshake.find("public:").unwrap();
                 let addr_to = &handshake.as_str()[14..begin_public];
                 let public_conv = &handshake.as_str()[begin_public + 8..&handshake.len() - 1]
@@ -127,6 +140,8 @@ fn main() {
                 let thread_sender =
                     start_thread_sender(addr_to.to_string(), public_conv.to_string());
 
+                println!("time spended for connect {}sec", timer.elapsed().as_secs());
+
                 thread_listen.join().unwrap();
                 thread_sender.join().unwrap();
             }
@@ -136,8 +151,8 @@ fn main() {
     }
 }
 fn encrypt_message(message: String, public_to: String) -> String {
-    if (public_to.is_empty()){
-        return message.trim().to_string()
+    if (public_to.is_empty()) {
+        return message.trim().to_string();
     }
     let pub_key =
         RsaPublicKey::from_public_key_pem(public_to.as_str()).expect("unable to read pub_key");
