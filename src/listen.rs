@@ -1,6 +1,9 @@
+use chrono::{Local, Timelike, Utc};
 use std::{
-    io::{BufRead, BufReader},
+    fmt::format,
+    io::{BufRead, BufReader, Write},
     net::TcpStream,
+    time::{SystemTime, UNIX_EPOCH},
 };
 use term_size;
 
@@ -13,31 +16,41 @@ pub trait GetHandshake {
 }
 impl PrintStream for TcpStream {
     fn print_stream(&self, private_us: String) {
-        let mut status = "//from conversator";
+        let time = format!("{}:{}", Local::now().hour(), Local::now().minute());
+        let mut chat_log =
+            std::fs::File::create(format!("{time}.txt")).expect("failed to create a file");
+        let mut status = "/from conversator".to_string();
         let buf_reader = BufReader::new(self);
         let private = private_us.clone();
         for line in buf_reader.lines() {
+            let time = format!("{}:{}", Local::now().hour(), Local::now().minute());
             match line {
                 Ok(mut msg) => {
                     if !private.clone().is_empty() {
                         msg = decrypt_message(msg.clone(), private.clone())
                             .trim()
                             .to_string();
-                        status = "//decrypted / from convensator";
+                        status = "/decrypted / from convensator".to_string();
                     }
+                    status = "// ".to_string() + time.to_string().as_str() + status.as_str();
                     let width = term_size::dimensions().unwrap().0;
+                    let mut content = format!(
+                        "{}",
+                        msg.to_string()
+                            + " "
+                                .repeat(width - msg.len() % width - status.len())
+                                .as_str()
+                            + status.as_str()
+                    );
                     if msg.len() % width < width - status.len() {
-                        println!(
-                            "{}",
-                            msg.to_string()
-                                + " "
-                                    .repeat(width - msg.len() % width - status.len())
-                                    .as_str()
-                                + status
-                        )
+                        println!("{content}");
                     } else {
-                        println!("{msg}\n{}{status}", " ".repeat(width - status.len()));
+                        content = format!("{msg}\n{}{status}", " ".repeat(width - status.len()));
+                        println!("{content}");
                     }
+                    chat_log
+                        .write_all(format!("{content}\n").as_bytes())
+                        .expect("cant write to log");
                 }
                 Err(_) => break,
             }
