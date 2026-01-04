@@ -16,10 +16,12 @@ use sha2::Sha256;
 
 use crate::{
     listen::{GetHandshake, PrintStream},
+    logging::SaveStream,
     sender::TcpSender,
 };
 
 mod listen;
+mod logging;
 mod sender;
 fn main() {
     println!("TcpChat");
@@ -65,6 +67,7 @@ fn main() {
 
             for mut stream in listener.incoming() {
                 println!("Got stream connection");
+
                 stream.unwrap().print_stream(private.clone());
                 println!("connection closed");
             }
@@ -105,7 +108,8 @@ fn main() {
                 send_handshake(addr_to.to_string(), addr_us.clone(), public.clone()).unwrap();
                 println!("sended handshake");
 
-                let thread_listen = start_thread_listener(addr_us.clone(), private.clone());
+                let thread_listen =
+                    start_thread_listener(addr_us.clone(), private.clone(), addr_to.to_string());
                 let thread_sender = start_thread_sender(addr_to.to_string(), public_conv.clone());
 
                 println!("time spended for connect {}sec", timer.elapsed().as_secs());
@@ -136,7 +140,8 @@ fn main() {
 
                 println!("to {addr_to} us {addr_us}");
 
-                let thread_listen = start_thread_listener(addr_us.clone(), private.clone());
+                let thread_listen =
+                    start_thread_listener(addr_us.clone(), private.clone(), addr_to.to_string());
                 let thread_sender =
                     start_thread_sender(addr_to.to_string(), public_conv.to_string());
 
@@ -202,14 +207,17 @@ fn start_listening_handshake(addr_us: &str) -> Result<String, String> {
         Err(_) => Err("No handshake started".to_string()),
     }
 }
-fn start_thread_listener(addr_us: String, private_us: String) -> JoinHandle<()> {
+fn start_thread_listener(addr_us: String, private_us: String, addr_to: String) -> JoinHandle<()> {
     let thread_listen = thread::spawn(move || {
         let listener = TcpListener::bind(addr_us.clone());
         match listener {
             Ok(_) => {
                 for stream in listener.unwrap().incoming() {
                     println!("Got stream connection");
-                    stream.unwrap().print_stream(private_us.clone());
+
+
+                    stream.as_ref().unwrap().print_stream(private_us.clone());
+                    //stream.as_ref().unwrap().save_stream(addr_to_clone.as_str(), private_us_clone.as_str());
                     println!("connection closed");
                 }
             }

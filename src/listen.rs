@@ -17,8 +17,7 @@ pub trait GetHandshake {
 impl PrintStream for TcpStream {
     fn print_stream(&self, private_us: String) {
         let time = format!("{}:{}", Local::now().hour(), Local::now().minute());
-        let mut chat_log =
-            std::fs::File::create(format!("{time}.txt")).expect("failed to create a file");
+        
         let mut status = "/from conversator".to_string();
         let buf_reader = BufReader::new(self);
         let private = private_us.clone();
@@ -48,9 +47,6 @@ impl PrintStream for TcpStream {
                         content = format!("{msg}\n{}{status}", " ".repeat(width - status.len()));
                         println!("{content}");
                     }
-                    chat_log
-                        .write_all(format!("{content}\n").as_bytes())
-                        .expect("cant write to log");
                 }
                 Err(_) => break,
             }
