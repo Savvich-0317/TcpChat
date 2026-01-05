@@ -15,8 +15,8 @@ use rsa::{
 use sha2::Sha256;
 
 use crate::{
-    listen::{GetHandshake, PrintStream},
-    logging::SaveStream,
+    listen::{GetHandshake, PrintMessage, PrintStream},
+    logging::{LogMessage, SaveStream},
     sender::TcpSender,
 };
 
@@ -26,7 +26,6 @@ mod sender;
 fn main() {
     println!("TcpChat");
 
-    //ssh-keygen -t rsa -b 4096 -m PKCS8 -f rsa_key -N ""
     let mut private = "".to_string();
     match fs::read_to_string("rsa_key") {
         Ok(text) => private = text.to_string(),
@@ -215,9 +214,17 @@ fn start_thread_listener(addr_us: String, private_us: String, addr_to: String) -
                 for stream in listener.unwrap().incoming() {
                     println!("Got stream connection");
 
+                    let buf_reader_stream = BufReader::new(stream.unwrap());
+                    for message in buf_reader_stream.lines() {
+                        match message {
+                            Ok(message) => {
+                                message.print_message(private_us.clone());
+                                message.log_message(addr_to.as_str(), private_us.as_str());
+                            }
+                            Err(_) => break,
+                        }
+                    }
 
-                    stream.as_ref().unwrap().print_stream(private_us.clone());
-                    //stream.as_ref().unwrap().save_stream(addr_to_clone.as_str(), private_us_clone.as_str());
                     println!("connection closed");
                 }
             }
