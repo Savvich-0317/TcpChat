@@ -13,7 +13,21 @@ pub trait SaveStream {
 pub trait LogMessage {
     fn log_message(&self, addr_to: &str, private_us: &str);
 }
+pub fn print_log(addr_to: &str) -> Result<(), &str> {
+    match std::fs::exists(format!("history/{addr_to}.txt")) {
+        Ok(true) => {
+            let mut buffer = "".to_string();
+            std::fs::File::open(format!("history/{addr_to}.txt"))
+                .unwrap()
+                .read_to_string(&mut buffer)
+                .unwrap();
 
+            println!("{}", buffer.trim());
+            Ok(())
+        }
+        _ => Err("There is no history for that adress."),
+    }
+}
 impl LogMessage for String {
     fn log_message(&self, addr_to: &str, private_us: &str) {
         let mut chat_log = match std::fs::exists(format!("history/{addr_to}.txt")) {

@@ -16,7 +16,7 @@ use sha2::Sha256;
 
 use crate::{
     listen::{GetHandshake, PrintMessage, PrintStream},
-    logging::{LogMessage, SaveStream},
+    logging::{LogMessage, SaveStream, print_log},
     sender::TcpSender,
 };
 
@@ -213,7 +213,11 @@ fn start_thread_listener(addr_us: String, private_us: String, addr_to: String) -
             Ok(_) => {
                 for stream in listener.unwrap().incoming() {
                     println!("Got stream connection");
-
+                    if let Err(err) = print_log(addr_to.as_str()) {
+                        println!("{err}");
+                    } else {
+                        println!("from previous conversation with this adress");
+                    }
                     let buf_reader_stream = BufReader::new(stream.unwrap());
                     for message in buf_reader_stream.lines() {
                         match message {
