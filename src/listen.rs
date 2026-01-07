@@ -1,9 +1,7 @@
-use chrono::{Local, Timelike, Utc};
+use chrono::{Local, Timelike};
 use std::{
-    fmt::format,
-    io::{BufRead, BufReader, Write},
+    io::{BufRead, BufReader},
     net::TcpStream,
-    time::{SystemTime, UNIX_EPOCH},
 };
 use term_size;
 
@@ -13,40 +11,6 @@ pub trait PrintStream {
 }
 pub trait GetHandshake {
     fn get_handshake(&self) -> Result<String, String>;
-}
-pub trait PrintMessage {
-    fn print_message(&self, private_us: String);
-}
-impl PrintMessage for String {
-    fn print_message(&self, private_us: String) {
-        let time = format!("{}:{}", Local::now().hour(), Local::now().minute());
-        let mut status = "/from conversator".to_string();
-        let private = private_us.clone();
-        let mut msg = self.clone();
-        if !private.clone().is_empty() {
-            msg = decrypt_message(msg.clone(), private.clone())
-                .trim()
-                .to_string();
-            status = "/decrypted / from convensator".to_string();
-        }
-        status = "// ".to_string() + time.to_string().as_str() + status.as_str();
-        let width = term_size::dimensions().unwrap().0;
-
-        if msg.len() % width < width - status.len() {
-            let content = format!(
-                "{}",
-                msg.to_string()
-                    + " "
-                        .repeat(width - msg.len() % width - status.len())
-                        .as_str()
-                    + status.as_str()
-            );
-            println!("{content}");
-        } else {
-            let content = format!("{msg}\n{}{status}", " ".repeat(width - status.len()));
-            println!("{content}");
-        }
-    }
 }
 
 impl PrintStream for TcpStream {

@@ -1,7 +1,7 @@
 use base64::{Engine as _, engine::general_purpose};
 use std::{
-    clone, fs,
-    io::{self, BufRead, BufReader, Write},
+     fs,
+    io::{self, BufRead, BufReader},
     net::TcpListener,
     thread::{self, JoinHandle},
     time::Instant,
@@ -15,8 +15,8 @@ use rsa::{
 use sha2::Sha256;
 
 use crate::{
-    listen::{GetHandshake, PrintMessage, PrintStream},
-    logging::{LogMessage, SaveStream, print_log},
+    listen::{GetHandshake, PrintStream},
+    logging::{LogMessage, PrintMessage, print_log},
     sender::TcpSender,
 };
 
@@ -187,7 +187,11 @@ fn send_handshake(addr_to: String, addr_us: String, public_key: String) -> Resul
             stream.reply(handshake).unwrap();
             Ok(())
         }
-        Err(e) => Err(e),
+        Err(e) => Err(
+            "There may be problem with connection, or given ip and received ip dont match. "
+                .to_string()
+                + e.as_str(),
+        ),
     }
 }
 

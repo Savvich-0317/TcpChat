@@ -13,6 +13,40 @@ pub trait SaveStream {
 pub trait LogMessage {
     fn log_message(&self, addr_to: &str, private_us: &str);
 }
+pub trait PrintMessage {
+    fn print_message(&self, private_us: String);
+}
+impl PrintMessage for String {
+    fn print_message(&self, private_us: String) {
+        let time = format!("{}:{}", Local::now().hour(), Local::now().minute());
+        let mut status = "/from conversator".to_string();
+        let private = private_us.clone();
+        let mut msg = self.clone();
+        if !private.clone().is_empty() {
+            msg = decrypt_message(msg.clone(), private.clone())
+                .trim()
+                .to_string();
+            status = "/decrypted / from convensator".to_string();
+        }
+        status = format!("// {time} {status}");
+        let width = term_size::dimensions().unwrap().0;
+
+        if msg.len() % width < width - status.len() {
+            let content = format!(
+                "{}",
+                msg.to_string()
+                    + " "
+                        .repeat(width - msg.len() % width - status.len())
+                        .as_str()
+                    + status.as_str()
+            );
+            println!("{content}");
+        } else {
+            let content = format!("{msg}\n{}{status}", " ".repeat(width - status.len()));
+            println!("{content}");
+        }
+    }
+}
 pub fn print_log(addr_to: &str) -> Result<(), &str> {
     match std::fs::exists(format!("history/{addr_to}.txt")) {
         Ok(true) => {
@@ -21,8 +55,25 @@ pub fn print_log(addr_to: &str) -> Result<(), &str> {
                 .unwrap()
                 .read_to_string(&mut buffer)
                 .unwrap();
-
-            println!("{}", buffer.trim());
+            let width = term_size::dimensions().unwrap().0;
+            for line in buffer.trim().split("\n") {
+                let msg = line[..line.find(" //").unwrap()].to_string();
+                let status = line[line.find(" //").unwrap()..].to_string();
+                if msg.len() % width < width - status.len() {
+                    let content = format!(
+                        "{}",
+                        msg.to_string()
+                            + " "
+                                .repeat(width - msg.len() % width - status.len())
+                                .as_str()
+                            + status.as_str()
+                    );
+                    println!("{content}");
+                } else {
+                    let content = format!("{msg}\n{}{status}", " ".repeat(width - status.len()));
+                    println!("{content}");
+                }
+            }
             Ok(())
         }
         _ => Err("There is no history for that adress."),
