@@ -1,7 +1,7 @@
 use base64::{Engine as _, engine::general_purpose};
 use std::{
-     fs,
-    io::{self, BufRead, BufReader},
+    fs,
+    io::{self, BufRead, BufReader, Read, Write},
     net::TcpListener,
     thread::{self, JoinHandle},
     time::Instant,
@@ -55,12 +55,28 @@ fn main() {
             println!("{}", encrypt);
             println!("{}", decrypt_message(encrypt, private.clone()));
     */
-    println!("choose operation mode 2-sender 1-listener 3 - client + server");
+    let mut saved_addr = "".to_string();
+    if fs::exists("addr_us").unwrap() {
+        println!("there is default us adress");
+        let mut file = fs::File::open("addr_us").unwrap();
+        file.read_to_string(&mut saved_addr).unwrap();
+        saved_addr = saved_addr.trim().to_string();
+    }
+    println!(
+        "choose operation mode 2-sender 1-listener 3 - client + server 4 - choose long term adress and port"
+    );
 
     let mut choose = "".to_string();
     io::stdin().read_line(&mut choose).unwrap();
 
     match choose.trim() {
+        "4" => {
+            let mut addr = fs::File::create("addr_us").unwrap();
+            println!("Type your adress");
+            let mut choose = "".to_string();
+            io::stdin().read_line(&mut choose).unwrap();
+            addr.write_all(choose.as_bytes()).unwrap();
+        }
         "1" => {
             let listener = TcpListener::bind("localhost:1212").unwrap();
 
@@ -87,8 +103,18 @@ fn main() {
             let mut addr_to = "".to_string(); //localhost:1212
             println!("who is we chatting with? Leave blank if we want use handshake");
             std::io::stdin().read_line(&mut addr_to).unwrap();
-            println!("who are we?");
-            std::io::stdin().read_line(&mut addr_us).unwrap();
+            if !saved_addr.is_empty(){
+                println!("who are we? Leave empty for {}",saved_addr);
+                std::io::stdin().read_line(&mut addr_us).unwrap();
+                if addr_us.trim().is_empty(){
+                    println!("using {} for us",addr_us);
+                    addr_us = saved_addr;
+                }
+            }else{
+                println!("who are we?");
+                std::io::stdin().read_line(&mut addr_us).unwrap();
+            }
+            
             addr_to = addr_to.trim().to_string();
             addr_us = addr_us.trim().to_string();
 
