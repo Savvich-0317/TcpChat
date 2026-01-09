@@ -63,13 +63,24 @@ fn main() {
         saved_addr = saved_addr.trim().to_string();
     }
     println!(
-        "choose operation mode 2-sender 1-listener 3 - client + server 4 - choose long term adress and port"
+        "choose operation mode 2-sender 1-listener 3 - client + server 4 - choose long term adress and port 5 delete conversation history"
     );
 
     let mut choose = "".to_string();
     io::stdin().read_line(&mut choose).unwrap();
 
     match choose.trim() {
+        "5" => {
+            println!("Sure? y/n");
+            let mut choose = "".to_string();
+            io::stdin().read_line(&mut choose).unwrap();
+            if choose.trim().to_ascii_lowercase() == "y" {
+                for entry in fs::read_dir("history").unwrap() {
+                    fs::remove_file(entry.unwrap().path()).unwrap();
+                }
+                println!("History deleted");
+            }
+        }
         "4" => {
             let mut addr = fs::File::create("addr_us").unwrap();
             println!("Type your adress");
@@ -103,18 +114,18 @@ fn main() {
             let mut addr_to = "".to_string(); //localhost:1212
             println!("who is we chatting with? Leave blank if we want use handshake");
             std::io::stdin().read_line(&mut addr_to).unwrap();
-            if !saved_addr.is_empty(){
-                println!("who are we? Leave empty for {}",saved_addr);
+            if !saved_addr.is_empty() {
+                println!("who are we? Leave empty for {}", saved_addr);
                 std::io::stdin().read_line(&mut addr_us).unwrap();
-                if addr_us.trim().is_empty(){
-                    println!("using {} for us",addr_us);
+                if addr_us.trim().is_empty() {
+                    println!("using {} for us", addr_us);
                     addr_us = saved_addr;
                 }
-            }else{
+            } else {
                 println!("who are we?");
                 std::io::stdin().read_line(&mut addr_us).unwrap();
             }
-            
+
             addr_to = addr_to.trim().to_string();
             addr_us = addr_us.trim().to_string();
 
