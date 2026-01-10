@@ -23,6 +23,10 @@ use crate::{
 mod listen;
 mod logging;
 mod sender;
+#[derive(serde::Deserialize)]
+struct Config {
+    addr_us: String,
+}
 fn main() {
     println!("TcpChat");
 
@@ -55,13 +59,12 @@ fn main() {
             println!("{}", encrypt);
             println!("{}", decrypt_message(encrypt, private.clone()));
     */
+    
     let mut saved_addr = "".to_string();
-    if fs::exists("addr_us").unwrap() {
-        println!("there is default us adress");
-        let mut file = fs::File::open("addr_us").unwrap();
-        file.read_to_string(&mut saved_addr).unwrap();
-        saved_addr = saved_addr.trim().to_string();
-    }
+    let content = fs::read_to_string("config.toml").unwrap();
+    let toml : Config = toml::from_str(content.as_str()).unwrap();
+    println!("{}",toml.addr_us);
+    
     println!(
         "choose operation mode 2-sender 1-listener 3 - client + server 4 - choose long term adress and port 5 delete conversation history"
     );
