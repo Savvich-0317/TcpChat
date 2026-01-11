@@ -23,7 +23,7 @@ use crate::{
 mod listen;
 mod logging;
 mod sender;
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, serde::Serialize)]
 struct Config {
     addr_us: String,
 }
@@ -59,12 +59,12 @@ fn main() {
             println!("{}", encrypt);
             println!("{}", decrypt_message(encrypt, private.clone()));
     */
+
     
-    let mut saved_addr = "".to_string();
     let content = fs::read_to_string("config.toml").unwrap();
-    let toml : Config = toml::from_str(content.as_str()).unwrap();
-    println!("{}",toml.addr_us);
-    
+    let mut toml: Config = toml::from_str(content.as_str()).unwrap();
+    println!("{}", toml.addr_us);
+
     println!(
         "choose operation mode 2-sender 1-listener 3 - client + server 4 - choose long term adress and port 5 delete conversation history"
     );
@@ -85,11 +85,12 @@ fn main() {
             }
         }
         "4" => {
-            let mut addr = fs::File::create("addr_us").unwrap();
             println!("Type your adress");
             let mut choose = "".to_string();
             io::stdin().read_line(&mut choose).unwrap();
-            addr.write_all(choose.as_bytes()).unwrap();
+            toml.addr_us = choose.trim().to_string();
+            let toml_content = toml::to_string(&toml).unwrap();
+            fs::write("config.toml", toml_content.as_bytes()).unwrap();
         }
         "1" => {
             let listener = TcpListener::bind("localhost:1212").unwrap();
@@ -117,12 +118,12 @@ fn main() {
             let mut addr_to = "".to_string(); //localhost:1212
             println!("who is we chatting with? Leave blank if we want use handshake");
             std::io::stdin().read_line(&mut addr_to).unwrap();
-            if !saved_addr.is_empty() {
-                println!("who are we? Leave empty for {}", saved_addr);
+            if !toml.addr_us.is_empty() {
+                println!("who are we? Leave empty for {}", toml.addr_us);
                 std::io::stdin().read_line(&mut addr_us).unwrap();
                 if addr_us.trim().is_empty() {
                     println!("using {} for us", addr_us);
-                    addr_us = saved_addr;
+                    addr_us = toml.addr_us;
                 }
             } else {
                 println!("who are we?");
