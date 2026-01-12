@@ -1,1 +1,3 @@
 addr_us = "localhost:6767"
+encryption = true
+save_history = true

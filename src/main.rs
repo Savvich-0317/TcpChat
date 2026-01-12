@@ -26,9 +26,14 @@ mod sender;
 #[derive(serde::Deserialize, serde::Serialize)]
 struct Config {
     addr_us: String,
+    encryption: bool,
+    save_history: bool,
 }
 fn main() {
     println!("TcpChat");
+
+    let content = fs::read_to_string("config.toml").unwrap();
+    let mut saved_config: Config = toml::from_str(content.as_str()).unwrap();
 
     let mut private = "".to_string();
     match fs::read_to_string("rsa_key") {
@@ -47,11 +52,20 @@ fn main() {
     }
 
     if (!public.is_empty() && !private.is_empty()) {
-        println!("There is rsa keys! We will try to run encryption!");
+        println!("There is rsa keys!");
     } else {
         println!(
             "There is no encryption keys! You can generate pair with generate_my_keys.sh in directory!"
         );
+    }
+
+    if !saved_config.encryption {
+        private = "".to_string();
+        public = "".to_string();
+        println!("Encryption disabled via config.");
+    }
+    if !saved_config.save_history {
+        println!("History saving disabled via config.");
     }
     /*
             let message = "lol aboba";
@@ -59,11 +73,6 @@ fn main() {
             println!("{}", encrypt);
             println!("{}", decrypt_message(encrypt, private.clone()));
     */
-
-    
-    let content = fs::read_to_string("config.toml").unwrap();
-    let mut toml: Config = toml::from_str(content.as_str()).unwrap();
-    println!("{}", toml.addr_us);
 
     println!(
         "choose operation mode 2-sender 1-listener 3 - client + server 4 - choose long term adress and port 5 delete conversation history"
@@ -88,8 +97,8 @@ fn main() {
             println!("Type your adress");
             let mut choose = "".to_string();
             io::stdin().read_line(&mut choose).unwrap();
-            toml.addr_us = choose.trim().to_string();
-            let toml_content = toml::to_string(&toml).unwrap();
+            saved_config.addr_us = choose.trim().to_string();
+            let toml_content = toml::to_string(&saved_config).unwrap();
             fs::write("config.toml", toml_content.as_bytes()).unwrap();
         }
         "1" => {
@@ -118,12 +127,12 @@ fn main() {
             let mut addr_to = "".to_string(); //localhost:1212
             println!("who is we chatting with? Leave blank if we want use handshake");
             std::io::stdin().read_line(&mut addr_to).unwrap();
-            if !toml.addr_us.is_empty() {
-                println!("who are we? Leave empty for {}", toml.addr_us);
+            if !saved_config.addr_us.is_empty() {
+                println!("who are we? Leave empty for {}", saved_config.addr_us);
                 std::io::stdin().read_line(&mut addr_us).unwrap();
                 if addr_us.trim().is_empty() {
-                    println!("using {} for us", addr_us);
-                    addr_us = toml.addr_us;
+                    println!("using {} for us", saved_config.addr_us);
+                    addr_us = saved_config.addr_us;
                 }
             } else {
                 println!("who are we?");
@@ -148,8 +157,12 @@ fn main() {
                 send_handshake(addr_to.to_string(), addr_us.clone(), public.clone()).unwrap();
                 println!("sended handshake");
 
-                let thread_listen =
-                    start_thread_listener(addr_us.clone(), private.clone(), addr_to.to_string());
+                let thread_listen = start_thread_listener(
+                    addr_us.clone(),
+                    private.clone(),
+                    addr_to.to_string(),
+                    saved_config.save_history,
+                );
                 let thread_sender = start_thread_sender(addr_to.to_string(), public_conv.clone());
 
                 println!("time spended for connect {}sec", timer.elapsed().as_secs());
@@ -180,8 +193,12 @@ fn main() {
 
                 println!("to {addr_to} us {addr_us}");
 
-                let thread_listen =
-                    start_thread_listener(addr_us.clone(), private.clone(), addr_to.to_string());
+                let thread_listen = start_thread_listener(
+                    addr_us.clone(),
+                    private.clone(),
+                    addr_to.to_string(),
+                    saved_config.save_history,
+                );
                 let thread_sender =
                     start_thread_sender(addr_to.to_string(), public_conv.to_string());
 
@@ -251,7 +268,12 @@ fn start_listening_handshake(addr_us: &str) -> Result<String, String> {
         Err(_) => Err("No handshake started".to_string()),
     }
 }
-fn start_thread_listener(addr_us: String, private_us: String, addr_to: String) -> JoinHandle<()> {
+fn start_thread_listener(
+    addr_us: String,
+    private_us: String,
+    addr_to: String,
+    save_history: bool,
+) -> JoinHandle<()> {
     let thread_listen = thread::spawn(move || {
         let listener = TcpListener::bind(addr_us.clone());
         match listener {
@@ -268,7 +290,9 @@ fn start_thread_listener(addr_us: String, private_us: String, addr_to: String) -
                         match message {
                             Ok(message) => {
                                 message.print_message(private_us.clone());
-                                message.log_message(addr_to.as_str(), private_us.as_str());
+                                if save_history {
+                                    message.log_message(addr_to.as_str(), private_us.as_str());
+                                }
                             }
                             Err(_) => break,
                         }
