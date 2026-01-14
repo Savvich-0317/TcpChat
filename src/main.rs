@@ -1,7 +1,7 @@
 use base64::{Engine as _, engine::general_purpose};
 use cursive::{
     Cursive, CursiveExt,
-    views::{Button, Dialog, Layer, StackView, TextArea, TextView},
+    views::{Button, Dialog, Layer, LinearLayout, StackView, TextArea, TextView},
 };
 use std::{
     fs,
@@ -89,15 +89,18 @@ fn main() {
         "6" => {
             let mut siv = Cursive::new();
             let mut files = "".to_string();
+            
+            let mut layout = LinearLayout::vertical();
             for file in fs::read_dir("history").unwrap() {
-                files += format!("{}\n", file.unwrap().file_name().to_str().unwrap()).as_str();
+                let file_name = file.unwrap().file_name().into_string().unwrap();
+                files += format!("{}\n", &file_name).as_str();
+                layout.add_child(Button::new(&file_name[..file_name.len()-4], |s| s.quit()));
             }
-
+            
             siv.add_layer(
-                Dialog::new()
-                    .content(TextView::new(files))
-                    .button("Ok", |s| s.quit()),
+                Dialog::around(layout).title("Continue conversation with...")
             );
+            
             siv.run();
         }
         "5" => {
