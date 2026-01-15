@@ -4,11 +4,7 @@ use cursive::{
     views::{Button, Dialog, Layer, LinearLayout, StackView, TextArea, TextView},
 };
 use std::{
-    fs,
-    io::{self, BufRead, BufReader, Read, Write},
-    net::TcpListener,
-    thread::{self, JoinHandle},
-    time::Instant,
+    fs, io::{self, BufRead, BufReader, Read, Write}, net::TcpListener, path::Display, sync::Mutex, thread::{self, JoinHandle}, time::Instant
 };
 
 use rsa::{
@@ -32,6 +28,7 @@ struct Config {
     addr_us: String,
     encryption: bool,
     save_history: bool,
+    tui_interface: bool
 }
 fn main() {
     println!("TcpChat");
@@ -77,32 +74,43 @@ fn main() {
             println!("{}", encrypt);
             println!("{}", decrypt_message(encrypt, private.clone()));
     */
-
+   
+    if saved_config.tui_interface {
+        let mut siv = Cursive::new();
+        let mut files = "".to_string();
+        
+        let mut layout = LinearLayout::vertical();
+        for file in fs::read_dir("history").unwrap() {
+            let file_name = file.unwrap().file_name().into_string().unwrap();
+            files += format!("{}\n", &file_name).as_str();
+            layout.add_child(Button::new(file_name.clone()[..file_name.clone().len()-4].to_string(), move |s| {
+                s.set_user_data(file_name.clone()[..file_name.len()-4].to_string());
+                s.quit();
+            }));
+        }
+        
+        siv.add_layer(
+            Dialog::around(layout).title("Continue conversation with...")
+        );
+        siv.run();
+        
+        println!("choosed {}",siv.user_data::<String>().unwrap());
+    }else{
+        
+    }
+    
+    
+    
     println!(
-        "choose operation mode 2-sender 1-listener 3 - client + server 4 - choose long term adress and port 5 delete conversation history 6 browse conversators"
+        "choose operation mode 2-sender 1-listener 3 - client + server 4 - choose long term adress and port 5 delete conversation history"
     );
 
     let mut choose = "".to_string();
     io::stdin().read_line(&mut choose).unwrap();
+   
 
     match choose.trim() {
-        "6" => {
-            let mut siv = Cursive::new();
-            let mut files = "".to_string();
-            
-            let mut layout = LinearLayout::vertical();
-            for file in fs::read_dir("history").unwrap() {
-                let file_name = file.unwrap().file_name().into_string().unwrap();
-                files += format!("{}\n", &file_name).as_str();
-                layout.add_child(Button::new(&file_name[..file_name.len()-4], |s| s.quit()));
-            }
-            
-            siv.add_layer(
-                Dialog::around(layout).title("Continue conversation with...")
-            );
-            
-            siv.run();
-        }
+        
         "5" => {
             println!("Sure? y/n");
             let mut choose = "".to_string();
