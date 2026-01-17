@@ -1,6 +1,7 @@
 use base64::{Engine as _, engine::general_purpose};
 use cursive::{
-    Cursive, CursiveExt, view, views::{Button, Dialog, Layer, LinearLayout, StackView, TextArea, TextView}
+    Cursive, CursiveExt, view::{self, Nameable},
+    views::{Button, Dialog, Layer, LinearLayout, StackView, TextArea, TextView},
 };
 use std::{
     fs,
@@ -34,6 +35,11 @@ struct Config {
     encryption: bool,
     save_history: bool,
     tui_interface: bool,
+}
+
+struct ReadedData {
+    addr_us: String,
+    addr_to: String,
 }
 fn main() {
     println!("TcpChat");
@@ -90,7 +96,10 @@ fn main() {
             layout.add_child(Button::new(
                 file_name.clone()[..file_name.clone().len() - 4].to_string(),
                 move |s| {
-                    s.set_user_data(file_name.clone()[..file_name.len() - 4].to_string());
+                    s.set_user_data(ReadedData {
+                        addr_to: file_name.clone()[..file_name.len() - 4].to_string(),
+                        addr_us: "".to_string(),
+                    });
                     s.add_layer(
                         Dialog::new()
                             .content(TextView::new(format!(
@@ -106,20 +115,39 @@ fn main() {
                 },
             ));
         }
-        
+
         layout.add_child(Button::new("New...", |s| {
-            let captured_addr_to = TextArea::new();
+            let captured_addr_to = TextArea::new().with_name("adress_to");
+            let captured_addr_us = TextArea::new().with_name("adress_us");
             let mut add_layout = LinearLayout::vertical();
             add_layout.add_child(TextView::new("Adress to?"));
             add_layout.add_child(captured_addr_to);
-            s.add_layer(Dialog::new().content(add_layout).title("Start new conversation").button("Start", |s| s.quit()));
+            add_layout.add_child(TextView::new("Adress us?"));
+            add_layout.add_child(captured_addr_us);
+            s.add_layer(
+                Dialog::new()
+                    .content(add_layout)
+                    .title("Start new conversation")
+                    .button("Start", |s| {
+                        let addr_to = s.call_on_name("adress_to", |v: &mut TextArea| v.get_content().to_string());
+                        let addr_us = s.call_on_name("adress_us", |v: &mut TextArea| v.get_content().to_string());
+                        
+                        s.set_user_data(ReadedData {
+                            addr_to: addr_to.unwrap(),
+                            addr_us: addr_us.unwrap(),
+                        });
+                        s.quit();
+                    }),
+            );
         }));
 
         siv.add_layer(Dialog::around(layout).title("Continue conversation with..."));
         siv.run();
 
-        println!("choosed {}", siv.user_data::<String>().unwrap());
+        let user_data = siv.take_user_data::<ReadedData>().unwrap();
+        println!("{} aboba {}", user_data.addr_to,user_data.addr_us);
     } else {
+        
     }
 
     println!(
