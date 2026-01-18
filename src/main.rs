@@ -1,6 +1,7 @@
 use base64::{Engine as _, engine::general_purpose};
 use cursive::{
-    Cursive, CursiveExt, view::{self, Nameable},
+    Cursive, CursiveExt,
+    view::{self, Nameable},
     views::{Button, Dialog, Layer, LinearLayout, StackView, TextArea, TextView},
 };
 use std::{
@@ -100,6 +101,10 @@ fn main() {
                         addr_to: file_name.clone()[..file_name.len() - 4].to_string(),
                         addr_us: "".to_string(),
                     });
+                    let mut layout = LinearLayout::vertical();
+                    layout.add_child(TextView::new("Adress us?"));
+
+                    layout.add_child(TextArea::new().with_name("adress_us_e"));
                     s.add_layer(
                         Dialog::new()
                             .content(TextView::new(format!(
@@ -107,8 +112,19 @@ fn main() {
                                 file_name.clone()[..file_name.len() - 4].to_string()
                             )))
                             .title("Are you sure?")
-                            .button("Yes", |s| s.quit())
-                            .button("No", |s| {
+                            .content(layout)
+                            .button("Yes", |s| {
+                                let addr_us = s.call_on_name("adress_us_e", |v: &mut TextArea| {
+                                    v.get_content().to_string()
+                                });
+                                let data = ReadedData {
+                                    addr_to: s.user_data::<ReadedData>().unwrap().addr_to.clone(),
+                                    addr_us: addr_us.unwrap(),
+                                };
+                                s.set_user_data(data);
+                                s.quit();
+                            })
+                            .button("Cancel", |s| {
                                 s.pop_layer();
                             }),
                     );
@@ -129,14 +145,21 @@ fn main() {
                     .content(add_layout)
                     .title("Start new conversation")
                     .button("Start", |s| {
-                        let addr_to = s.call_on_name("adress_to", |v: &mut TextArea| v.get_content().to_string());
-                        let addr_us = s.call_on_name("adress_us", |v: &mut TextArea| v.get_content().to_string());
-                        
+                        let addr_to = s.call_on_name("adress_to", |v: &mut TextArea| {
+                            v.get_content().to_string()
+                        });
+                        let addr_us = s.call_on_name("adress_us", |v: &mut TextArea| {
+                            v.get_content().to_string()
+                        });
+
                         s.set_user_data(ReadedData {
                             addr_to: addr_to.unwrap(),
                             addr_us: addr_us.unwrap(),
                         });
                         s.quit();
+                    })
+                    .button("Cancel", |s| {
+                        s.pop_layer();
                     }),
             );
         }));
@@ -145,9 +168,8 @@ fn main() {
         siv.run();
 
         let user_data = siv.take_user_data::<ReadedData>().unwrap();
-        println!("{} aboba {}", user_data.addr_to,user_data.addr_us);
+        println!("{} aboba {}", user_data.addr_to, user_data.addr_us);
     } else {
-        
     }
 
     println!(
