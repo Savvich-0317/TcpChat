@@ -86,6 +86,10 @@ fn main() {
             println!("{}", encrypt);
             println!("{}", decrypt_message(encrypt, private.clone()));
     */
+    let mut addr_us = "".to_string(); //localhost:2121
+    let mut addr_to = "".to_string(); //localhost:1212
+
+    let mut choose = "3".to_string();
     if saved_config.tui_interface {
         let mut siv = Cursive::new();
         let mut files = "".to_string();
@@ -169,15 +173,16 @@ fn main() {
 
         let user_data = siv.take_user_data::<ReadedData>().unwrap();
         println!("{} aboba {}", user_data.addr_to, user_data.addr_us);
+        addr_to = user_data.addr_to;
+        addr_us = user_data.addr_us;
     } else {
+        println!(
+            "choose operation mode 2-sender 1-listener 3 - client + server 4 - choose long term adress and port 5 delete conversation history"
+        );
+        choose = "".to_string();
+        io::stdin().read_line(&mut choose).unwrap();
+
     }
-
-    println!(
-        "choose operation mode 2-sender 1-listener 3 - client + server 4 - choose long term adress and port 5 delete conversation history"
-    );
-
-    let mut choose = "".to_string();
-    io::stdin().read_line(&mut choose).unwrap();
 
     match choose.trim() {
         "5" => {
@@ -221,20 +226,20 @@ fn main() {
         }
 
         "3" => {
-            let mut addr_us = "".to_string(); //localhost:2121
-            let mut addr_to = "".to_string(); //localhost:1212
-            println!("who is we chatting with? Leave blank if we want use handshake");
-            std::io::stdin().read_line(&mut addr_to).unwrap();
-            if !saved_config.addr_us.is_empty() {
-                println!("who are we? Leave empty for {}", saved_config.addr_us);
-                std::io::stdin().read_line(&mut addr_us).unwrap();
-                if addr_us.trim().is_empty() {
-                    println!("using {} for us", saved_config.addr_us);
-                    addr_us = saved_config.addr_us;
+            if addr_to.is_empty() && addr_us.is_empty() {
+                println!("who is we chatting with? Leave blank if we want use handshake");
+                std::io::stdin().read_line(&mut addr_to).unwrap();
+                if !saved_config.addr_us.is_empty() {
+                    println!("who are we? Leave empty for {}", saved_config.addr_us);
+                    std::io::stdin().read_line(&mut addr_us).unwrap();
+                    if addr_us.trim().is_empty() {
+                        println!("using {} for us", saved_config.addr_us);
+                        addr_us = saved_config.addr_us;
+                    }
+                } else {
+                    println!("who are we?");
+                    std::io::stdin().read_line(&mut addr_us).unwrap();
                 }
-            } else {
-                println!("who are we?");
-                std::io::stdin().read_line(&mut addr_us).unwrap();
             }
 
             addr_to = addr_to.trim().to_string();

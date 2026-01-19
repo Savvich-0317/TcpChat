@@ -1,4 +1,4 @@
 addr_us = "localhost:6767"
 encryption = true
 save_history = true
-tui_interface = true #experimental feature
+tui_interface = false #experimental feature
