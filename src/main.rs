@@ -123,10 +123,38 @@ fn main() {
                                 });
                                 let data = ReadedData {
                                     addr_to: s.user_data::<ReadedData>().unwrap().addr_to.clone(),
-                                    addr_us: addr_us.unwrap(),
+                                    addr_us: addr_us.clone().unwrap(),
                                 };
                                 s.set_user_data(data);
-                                s.quit();
+
+                                match TcpListener::bind(addr_us.clone().unwrap()) {
+                                    Ok(_) => {
+                                        s.quit();
+                                    }
+                                    Err(_) => {
+                                        s.pop_layer();
+                                        s.add_layer(
+                                            Dialog::new()
+                                                .title("Error")
+                                                .content(TextView::new(format!("The {} adress is cant be binded \nCheck the port availability",addr_us.clone().unwrap())
+                                                    
+                                                ))
+                                                .button("Okay.", |s| {
+                                                    s.pop_layer();
+                                                }),
+                                        );
+                                    }
+                                }
+
+                                /*let mut conv =
+                                    LinearLayout::vertical();
+                                conv.add_child(TextView::new(format!(
+                                    "from {} to {} conversation",
+                                    s.take_user_data::<ReadedData>().unwrap().addr_us,
+                                    s.take_user_data::<ReadedData>().unwrap().addr_to
+                                )));
+                                s.add_fullscreen_layer(conv);
+                                s.quit();*/
                             })
                             .button("Cancel", |s| {
                                 s.pop_layer();
@@ -157,10 +185,27 @@ fn main() {
                         });
 
                         s.set_user_data(ReadedData {
-                            addr_to: addr_to.unwrap(),
-                            addr_us: addr_us.unwrap(),
+                            addr_to: addr_to.clone().unwrap(),
+                            addr_us: addr_us.clone().unwrap(),
                         });
-                        s.quit();
+                        match TcpListener::bind(addr_us.clone().unwrap()) {
+                            Ok(_) => {
+                                s.quit();
+                            }
+                            Err(_) => {
+                                s.pop_layer();
+                                s.add_layer(
+                                    Dialog::new()
+                                        .title("Error")
+                                        .content(TextView::new(format!("The {} adress is cant be binded \nCheck the port availability",addr_us.clone().unwrap())
+                                            
+                                        ))
+                                        .button("Okay.", |s| {
+                                            s.pop_layer();
+                                        }),
+                                );
+                            }
+                        }
                     })
                     .button("Cancel", |s| {
                         s.pop_layer();
@@ -181,7 +226,6 @@ fn main() {
         );
         choose = "".to_string();
         io::stdin().read_line(&mut choose).unwrap();
-
     }
 
     match choose.trim() {
