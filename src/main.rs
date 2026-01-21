@@ -1,8 +1,8 @@
 use base64::{Engine as _, engine::general_purpose};
 use cursive::{
     Cursive, CursiveExt,
-    view::{self, Nameable},
-    views::{Button, Dialog, Layer, LinearLayout, StackView, TextArea, TextView},
+    view::{self, Nameable, Resizable},
+    views::{Button, Dialog, DummyView, Layer, LinearLayout, StackView, TextArea, TextView},
 };
 use std::{
     fs,
@@ -93,6 +93,7 @@ fn main() {
     if saved_config.tui_interface {
         let mut siv = Cursive::new();
         let mut files = "".to_string();
+        siv.add_fullscreen_layer(TextView::new("TcpChat"));
 
         let mut layout = LinearLayout::vertical();
         for file in fs::read_dir("history").unwrap() {
@@ -137,7 +138,7 @@ fn main() {
                                             Dialog::new()
                                                 .title("Error")
                                                 .content(TextView::new(format!("The {} adress is cant be binded \nCheck the port availability",addr_us.clone().unwrap())
-                                                    
+
                                                 ))
                                                 .button("Okay.", |s| {
                                                     s.pop_layer();
@@ -146,15 +147,7 @@ fn main() {
                                     }
                                 }
 
-                                /*let mut conv =
-                                    LinearLayout::vertical();
-                                conv.add_child(TextView::new(format!(
-                                    "from {} to {} conversation",
-                                    s.take_user_data::<ReadedData>().unwrap().addr_us,
-                                    s.take_user_data::<ReadedData>().unwrap().addr_to
-                                )));
-                                s.add_fullscreen_layer(conv);
-                                s.quit();*/
+
                             })
                             .button("Cancel", |s| {
                                 s.pop_layer();
@@ -198,7 +191,7 @@ fn main() {
                                     Dialog::new()
                                         .title("Error")
                                         .content(TextView::new(format!("The {} adress is cant be binded \nCheck the port availability",addr_us.clone().unwrap())
-                                            
+
                                         ))
                                         .button("Okay.", |s| {
                                             s.pop_layer();
@@ -215,11 +208,25 @@ fn main() {
 
         siv.add_layer(Dialog::around(layout).title("Continue conversation with..."));
         siv.run();
-
         let user_data = siv.take_user_data::<ReadedData>().unwrap();
         println!("{} aboba {}", user_data.addr_to, user_data.addr_us);
-        addr_to = user_data.addr_to;
-        addr_us = user_data.addr_us;
+        addr_to = user_data.addr_to.clone();
+        addr_us = user_data.addr_us.clone();
+
+        let mut conv = LinearLayout::vertical();
+        conv.add_child(TextView::new(format!("from {} to {} conversation",addr_us,addr_to)));
+        conv.add_child(TextArea::new().content("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. ").disabled());
+        conv.add_child(DummyView.fixed_height(1));
+        let mut answer = LinearLayout::horizontal();
+        answer.add_child(TextArea::new());
+        answer.add_child((Button::new("reply", |_|{})));
+        conv.add_child(answer);
+        siv.pop_layer();
+        siv.pop_layer();
+        siv.add_fullscreen_layer(conv);
+        
+        siv.run(); //not runned in thread so stopping connection
+        
     } else {
         println!(
             "choose operation mode 2-sender 1-listener 3 - client + server 4 - choose long term adress and port 5 delete conversation history"
