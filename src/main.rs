@@ -9,9 +9,9 @@ use std::{
     io::{self, BufRead, BufReader, Read, Write},
     net::TcpListener,
     path::Display,
-    sync::Mutex,
+    sync::{Arc, Mutex},
     thread::{self, JoinHandle},
-    time::Instant,
+    time::{Duration, Instant},
 };
 
 use rsa::{
@@ -213,6 +213,7 @@ fn main() {
         addr_to = user_data.addr_to.clone();
         addr_us = user_data.addr_us.clone();
 
+        /*
         let mut conv = LinearLayout::vertical();
         conv.add_child(TextView::new(format!("from {} to {} conversation",addr_us,addr_to)));
         conv.add_child(TextArea::new().content("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. ").disabled());
@@ -224,9 +225,10 @@ fn main() {
         siv.pop_layer();
         siv.pop_layer();
         siv.add_fullscreen_layer(conv);
-        
+
         siv.run(); //not runned in thread so stopping connection
-        
+         */
+        siv.quit();
     } else {
         println!(
             "choose operation mode 2-sender 1-listener 3 - client + server 4 - choose long term adress and port 5 delete conversation history"
@@ -296,6 +298,21 @@ fn main() {
             addr_to = addr_to.trim().to_string();
             addr_us = addr_us.trim().to_string();
 
+            /*
+                        let mut text = TextView::new("").with_name("loading_text");
+                        cursive_flexi_logger_view::show_flexi_logger_debug_console(&mut siv);
+                        siv.run();
+            */
+/* 
+            let mut connected = Arc::new(Mutex::new(false));
+            let connected_clone = connected.clone();
+            thread::spawn(move || {
+                let mut siv = Cursive::new();
+                siv.add_layer(TextView::new("Trying to connect..."));
+                siv.run();
+                
+            });
+            */
             if addr_to.trim().is_empty() {
                 let handshake = start_listening_handshake(addr_us.as_str()).unwrap();
                 let timer = Instant::now();
@@ -318,7 +335,7 @@ fn main() {
                     saved_config.save_history,
                 );
                 let thread_sender = start_thread_sender(addr_to.to_string(), public_conv.clone());
-
+                
                 println!("time spended for connect {}sec", timer.elapsed().as_secs());
 
                 thread_listen.join().unwrap();
@@ -357,7 +374,7 @@ fn main() {
                     start_thread_sender(addr_to.to_string(), public_conv.to_string());
 
                 println!("time spended for connect {}sec", timer.elapsed().as_secs());
-
+                
                 thread_listen.join().unwrap();
                 thread_sender.join().unwrap();
             }
