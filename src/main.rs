@@ -1,8 +1,6 @@
 use base64::{Engine as _, engine::general_purpose};
 use cursive::{
-    Cursive, CursiveExt,
-    view::{self, Nameable, Resizable},
-    views::{Button, Dialog, DummyView, Layer, LinearLayout, StackView, TextArea, TextView},
+    Cursive, CursiveExt, backend, event::{Event, Key}, view::{self, Nameable, Resizable}, views::{Button, Dialog, DummyView, Layer, LinearLayout, OnEventView, StackView, TextArea, TextView}
 };
 use std::{
     fs,
@@ -91,7 +89,7 @@ fn main() {
 
     let mut choose = "3".to_string();
     if saved_config.tui_interface {
-        let mut siv = Cursive::new();
+        let mut siv = Cursive::default();
         let mut files = "".to_string();
         siv.add_fullscreen_layer(TextView::new("TcpChat"));
 
@@ -154,7 +152,7 @@ fn main() {
                             }),
                     );
                 },
-            ));
+            ).with_name("adress_select"));
         }
 
         layout.add_child(Button::new("New...", |s| {
@@ -205,8 +203,20 @@ fn main() {
                     }),
             );
         }));
-
-        siv.add_layer(Dialog::around(layout).title("Continue conversation with..."));
+        //#TODO burn all this place down
+        let mut main = LinearLayout::horizontal();
+        let event_view = OnEventView::new(layout).on_event(Key::Down, |s|{
+            
+            s.call_on_name("History", |h: &mut TextArea|{h.set_content("content");});
+            
+        });
+        main.add_child(Dialog::around(event_view).title("Continue conversation with..."));
+        main.add_child(LinearLayout::vertical().child(Dialog::new().content(TextArea::new().with_name("History")).title("History")));
+        
+        
+        
+           
+        siv.add_layer(main);
         siv.run();
         let user_data = siv.take_user_data::<ReadedData>().unwrap();
         println!("{} aboba {}", user_data.addr_to, user_data.addr_us);
