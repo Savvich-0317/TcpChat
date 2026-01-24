@@ -1,6 +1,11 @@
 use base64::{Engine as _, engine::general_purpose};
 use cursive::{
-    Cursive, CursiveExt, backend, event::{Event, Key}, view::{self, Nameable, Resizable}, views::{Button, Dialog, DummyView, Layer, LinearLayout, OnEventView, StackView, TextArea, TextView}
+    Cursive, CursiveExt, backend,
+    event::{Event, Key},
+    view::{self, Nameable, Resizable},
+    views::{
+        Button, Dialog, DummyView, Layer, LinearLayout, OnEventView, StackView, TextArea, TextView,
+    },
 };
 use std::{
     fs,
@@ -90,6 +95,7 @@ fn main() {
     let mut choose = "3".to_string();
     if saved_config.tui_interface {
         let mut siv = Cursive::default();
+        siv.set_fps(60);
         let mut files = "".to_string();
         siv.add_fullscreen_layer(TextView::new("TcpChat"));
 
@@ -97,6 +103,7 @@ fn main() {
         for file in fs::read_dir("history").unwrap() {
             let file_name = file.unwrap().file_name().into_string().unwrap();
             files += format!("{}\n", &file_name).as_str();
+            
             layout.add_child(Button::new(
                 file_name.clone()[..file_name.clone().len() - 4].to_string(),
                 move |s| {
@@ -108,6 +115,7 @@ fn main() {
                     layout.add_child(TextView::new("Adress us?"));
 
                     layout.add_child(TextArea::new().with_name("adress_us_e"));
+                    layout.add_child(Dialog::new().title("History").content(TextArea::new().disabled().content(file_name.clone()[..file_name.len() - 4].to_string())));
                     s.add_layer(
                         Dialog::new()
                             .content(TextView::new(format!(
@@ -203,19 +211,12 @@ fn main() {
                     }),
             );
         }));
-        //#TODO burn all this place down
+
         let mut main = LinearLayout::horizontal();
-        let event_view = OnEventView::new(layout).on_event(Key::Down, |s|{
-            
-            s.call_on_name("History", |h: &mut TextArea|{h.set_content("content");});
-            
-        });
-        main.add_child(Dialog::around(event_view).title("Continue conversation with..."));
-        main.add_child(LinearLayout::vertical().child(Dialog::new().content(TextArea::new().with_name("History")).title("History")));
+
+        main.add_child(Dialog::around(layout).title("Continue conversation with..."));
         
-        
-        
-           
+
         siv.add_layer(main);
         siv.run();
         let user_data = siv.take_user_data::<ReadedData>().unwrap();
@@ -313,14 +314,14 @@ fn main() {
                         cursive_flexi_logger_view::show_flexi_logger_debug_console(&mut siv);
                         siv.run();
             */
-/* 
+            /*
             let mut connected = Arc::new(Mutex::new(false));
             let connected_clone = connected.clone();
             thread::spawn(move || {
                 let mut siv = Cursive::new();
                 siv.add_layer(TextView::new("Trying to connect..."));
                 siv.run();
-                
+
             });
             */
             if addr_to.trim().is_empty() {
@@ -345,7 +346,7 @@ fn main() {
                     saved_config.save_history,
                 );
                 let thread_sender = start_thread_sender(addr_to.to_string(), public_conv.clone());
-                
+
                 println!("time spended for connect {}sec", timer.elapsed().as_secs());
 
                 thread_listen.join().unwrap();
@@ -384,7 +385,7 @@ fn main() {
                     start_thread_sender(addr_to.to_string(), public_conv.to_string());
 
                 println!("time spended for connect {}sec", timer.elapsed().as_secs());
-                
+
                 thread_listen.join().unwrap();
                 thread_sender.join().unwrap();
             }
