@@ -103,7 +103,7 @@ fn main() {
         for file in fs::read_dir("history").unwrap() {
             let file_name = file.unwrap().file_name().into_string().unwrap();
             files += format!("{}\n", &file_name).as_str();
-            
+
             layout.add_child(Button::new(
                 file_name.clone()[..file_name.clone().len() - 4].to_string(),
                 move |s| {
@@ -115,13 +115,9 @@ fn main() {
                     layout.add_child(TextView::new("Adress us?"));
 
                     layout.add_child(TextArea::new().with_name("adress_us_e"));
-                    layout.add_child(Dialog::new().title("History").content(TextArea::new().disabled().content(file_name.clone()[..file_name.len() - 4].to_string())));
                     s.add_layer(
+                        LinearLayout::horizontal().child(
                         Dialog::new()
-                            .content(TextView::new(format!(
-                                "To chat with {}",
-                                file_name.clone()[..file_name.len() - 4].to_string()
-                            )))
                             .title("Are you sure?")
                             .content(layout)
                             .button("Yes", |s| {
@@ -157,9 +153,10 @@ fn main() {
                             })
                             .button("Cancel", |s| {
                                 s.pop_layer();
-                            }),
+                            }),).child(Dialog::new().title(format!("From previous convs with {}",file_name.clone()[..file_name.len() - 4].to_string())).content(TextArea::new().disabled().content(fs::read_to_string(format!("history/{}",file_name.clone())).unwrap_or_default())))
                     );
-                },
+
+                }, 
             ).with_name("adress_select"));
         }
 
@@ -215,7 +212,6 @@ fn main() {
         let mut main = LinearLayout::horizontal();
 
         main.add_child(Dialog::around(layout).title("Continue conversation with..."));
-        
 
         siv.add_layer(main);
         siv.run();
