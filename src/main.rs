@@ -91,6 +91,7 @@ fn main() {
     */
     let mut addr_us = "".to_string(); //localhost:2121
     let mut addr_to = "".to_string(); //localhost:1212
+    let saved_addr_us = Arc::new(saved_config.addr_us.clone());
 
     let mut choose = "3".to_string();
     if saved_config.tui_interface {
@@ -100,30 +101,40 @@ fn main() {
         siv.add_fullscreen_layer(TextView::new("TcpChat"));
 
         let mut layout = LinearLayout::vertical();
+        let saved_addr_us = Arc::clone(&saved_addr_us);
         for file in fs::read_dir("history").unwrap() {
             let file_name = file.unwrap().file_name().into_string().unwrap();
             files += format!("{}\n", &file_name).as_str();
-
+            let saved = Arc::clone(&saved_addr_us);
             layout.add_child(Button::new(
                 file_name.clone()[..file_name.clone().len() - 4].to_string(),
                 move |s| {
+
                     s.set_user_data(ReadedData {
                         addr_to: file_name.clone()[..file_name.len() - 4].to_string(),
                         addr_us: "".to_string(),
                     });
                     let mut layout = LinearLayout::vertical();
-                    layout.add_child(TextView::new("Adress us?"));
+                    if saved.is_empty(){
+                        layout.add_child(TextView::new("Adress us?"));
+                    }else {
+                        layout.add_child(TextView::new(format!("Adress us? Leave empty for {}",saved)));
+                    }
 
                     layout.add_child(TextArea::new().with_name("adress_us_e"));
+                    let value = saved.clone();
                     s.add_layer(
                         LinearLayout::horizontal().child(
                         Dialog::new()
                             .title("Are you sure?")
                             .content(layout)
-                            .button("Yes", |s| {
-                                let addr_us = s.call_on_name("adress_us_e", |v: &mut TextArea| {
+                            .button("Yes", move |s| {
+                                let mut addr_us = s.call_on_name("adress_us_e", |v: &mut TextArea| {
                                     v.get_content().to_string()
                                 });
+                                if addr_us.clone().unwrap().is_empty(){
+                                    addr_us = Some(value.to_string());
+                                }
                                 let data = ReadedData {
                                     addr_to: s.user_data::<ReadedData>().unwrap().addr_to.clone(),
                                     addr_us: addr_us.clone().unwrap(),
@@ -156,29 +167,40 @@ fn main() {
                             }),).child(Dialog::new().title(format!("From previous convs with {}",file_name.clone()[..file_name.len() - 4].to_string())).content(TextArea::new().disabled().content(fs::read_to_string(format!("history/{}",file_name.clone())).unwrap_or_default())))
                     );
 
-                }, 
+                },
             ).with_name("adress_select"));
         }
-
-        layout.add_child(Button::new("New...", |s| {
+        let saved_addr_us = saved_addr_us.clone();
+        layout.add_child(Button::new("New...", move |s| {
             let captured_addr_to = TextArea::new().with_name("adress_to");
             let captured_addr_us = TextArea::new().with_name("adress_us");
             let mut add_layout = LinearLayout::vertical();
             add_layout.add_child(TextView::new("Adress to?"));
             add_layout.add_child(captured_addr_to);
-            add_layout.add_child(TextView::new("Adress us?"));
+            if saved_addr_us.is_empty(){
+                add_layout.add_child(TextView::new("Adress us?"));
+            }else {
+                add_layout.add_child(TextView::new(format!("Adress us? Leave empty for {}",saved_addr_us)));
+            }
+
             add_layout.add_child(captured_addr_us);
+           let saved = saved_addr_us.clone();
+
             s.add_layer(
                 Dialog::new()
                     .content(add_layout)
                     .title("Start new conversation")
-                    .button("Start", |s| {
+                    .button("Start", move |s| {
                         let addr_to = s.call_on_name("adress_to", |v: &mut TextArea| {
                             v.get_content().to_string()
                         });
-                        let addr_us = s.call_on_name("adress_us", |v: &mut TextArea| {
+                        let mut addr_us = s.call_on_name("adress_us", |v: &mut TextArea| {
                             v.get_content().to_string()
                         });
+
+                        if addr_us.to_owned().unwrap().trim().is_empty(){
+                            addr_us = Some(saved.to_string());
+                        }
 
                         s.set_user_data(ReadedData {
                             addr_to: addr_to.clone().unwrap(),
