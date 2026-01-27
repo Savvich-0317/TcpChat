@@ -67,7 +67,7 @@ fn main() {
         }
     }
 
-    if (!public.is_empty() && !private.is_empty()) {
+    if !public.is_empty() && !private.is_empty() {
         println!("There is rsa keys!");
     } else {
         println!(
@@ -242,21 +242,6 @@ fn main() {
         addr_to = user_data.addr_to.clone();
         addr_us = user_data.addr_us.clone();
 
-        /*
-        let mut conv = LinearLayout::vertical();
-        conv.add_child(TextView::new(format!("from {} to {} conversation",addr_us,addr_to)));
-        conv.add_child(TextArea::new().content("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. ").disabled());
-        conv.add_child(DummyView.fixed_height(1));
-        let mut answer = LinearLayout::horizontal();
-        answer.add_child(TextArea::new());
-        answer.add_child((Button::new("reply", |_|{})));
-        conv.add_child(answer);
-        siv.pop_layer();
-        siv.pop_layer();
-        siv.add_fullscreen_layer(conv);
-
-        siv.run(); //not runned in thread so stopping connection
-         */
         siv.quit();
     } else {
         println!(
@@ -399,13 +384,40 @@ fn main() {
                     addr_to.to_string(),
                     saved_config.save_history,
                 );
+
+                println!("time spended for connect {}sec", timer.elapsed().as_secs());
+                let mut siv = Cursive::default();
+                if saved_config.tui_interface {
+                    let mut conv = LinearLayout::vertical();
+                    conv.add_child(TextView::new(format!(
+                        "from {} to {} conversation",
+                        addr_us, addr_to
+                    )));
+                    conv.add_child(TextArea::new().content("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. ").disabled());
+                    conv.add_child(DummyView.fixed_height(1));
+                    let mut answer = LinearLayout::horizontal();
+                    answer.add_child(TextArea::new().with_name("message"));
+                    answer.add_child(Button::new("reply", |s| {
+                        let message = s.call_on_name("message", |h: &mut TextArea| {
+                            h.get_content().to_string()
+                        });
+                        s.set_user_data(message.unwrap());
+                    }));
+                    conv.add_child(answer);
+                    siv.pop_layer();
+                    siv.pop_layer();
+                    siv.add_fullscreen_layer(conv);
+
+                    siv.run();
+                }
+
                 let thread_sender =
                     start_thread_sender(addr_to.to_string(), public_conv.to_string());
 
-                println!("time spended for connect {}sec", timer.elapsed().as_secs());
-
                 thread_listen.join().unwrap();
                 thread_sender.join().unwrap();
+
+                siv.quit();
             }
         }
 
