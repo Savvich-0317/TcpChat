@@ -234,7 +234,23 @@ fn main() {
         let mut main = LinearLayout::horizontal();
 
         main.add_child(Dialog::around(layout).title("Continue conversation with..."));
-
+        main.add_child(
+            Dialog::new()
+                .title("Menu")
+                .content(TextArea::new().with_name("longterm_addr_us"))
+                .button("Change longterm address us", |siv| {
+                    let content = fs::read_to_string("config.toml").unwrap();
+                    let mut saved_config: Config = toml::from_str(content.as_str()).unwrap();
+                    saved_config.addr_us = siv
+                        .call_on_name("longterm_addr_us", |h: &mut TextArea| {
+                            h.get_content().to_string()
+                        })
+                        .unwrap()
+                        .to_string();
+                    let toml_content = toml::to_string(&saved_config).unwrap();
+                    fs::write("config.toml", toml_content.as_bytes()).unwrap();
+                }),
+        );
         siv.add_layer(main);
         siv.run();
         let user_data = siv.take_user_data::<ReadedData>().unwrap();
