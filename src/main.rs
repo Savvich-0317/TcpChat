@@ -237,18 +237,32 @@ fn main() {
         main.add_child(
             Dialog::new()
                 .title("Menu")
-                .content(TextArea::new().with_name("longterm_addr_us"))
                 .button("Change longterm address us", |siv| {
-                    let content = fs::read_to_string("config.toml").unwrap();
-                    let mut saved_config: Config = toml::from_str(content.as_str()).unwrap();
-                    saved_config.addr_us = siv
-                        .call_on_name("longterm_addr_us", |h: &mut TextArea| {
-                            h.get_content().to_string()
-                        })
-                        .unwrap()
-                        .to_string();
-                    let toml_content = toml::to_string(&saved_config).unwrap();
-                    fs::write("config.toml", toml_content.as_bytes()).unwrap();
+                    siv.add_layer(
+                        Dialog::new()
+                            .content(TextArea::new().with_name("longterm_addr_us"))
+                            .title("Setting longterm adress")
+                            .button("Cancel", |siv| {
+                                siv.pop_layer();
+                            }).button("Ok", |siv| {
+                                let content = fs::read_to_string("config.toml").unwrap();
+                                let mut saved_config: Config = toml::from_str(content.as_str()).unwrap();
+                                saved_config.addr_us = siv
+                                    .call_on_name("longterm_addr_us", |h: &mut TextArea| {
+                                        h.get_content().to_string()
+                                    })
+                                    .unwrap()
+                                    .to_string();
+                                match TcpListener::bind(&saved_config.addr_us) {
+                                    Ok(_) => {siv.pop_layer();},
+                                    Err(_) => {siv.add_layer(Dialog::new().title("Warning").content(TextView::new(format!("The {} adress is cant be binded \nCheck the port availability",&saved_config.addr_us))).button("Okay", |siv|{siv.pop_layer();}));}
+                                }
+                                let toml_content = toml::to_string(&saved_config).unwrap();
+                                fs::write("config.toml", toml_content.as_bytes()).unwrap();
+                                
+                            })
+                    );
+
                 }),
         );
         siv.add_layer(main);
