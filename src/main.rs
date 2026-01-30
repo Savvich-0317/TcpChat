@@ -237,6 +237,12 @@ fn main() {
         main.add_child(
             Dialog::new()
                 .title("Menu")
+                .button("Delete history", |siv|{siv.add_layer(Dialog::new().title("Warning").content(TextView::new("This action will delete all history")).button("Ok", |siv|{
+                    for entry in fs::read_dir("history").unwrap() {
+                        fs::remove_file(entry.unwrap().path()).unwrap();
+                    }
+                    siv.pop_layer();
+                }).button("No", |siv|{siv.pop_layer();}));})
                 .button("Change longterm address us", |siv| {
                     siv.add_layer(
                         Dialog::new()
@@ -259,7 +265,7 @@ fn main() {
                                 }
                                 let toml_content = toml::to_string(&saved_config).unwrap();
                                 fs::write("config.toml", toml_content.as_bytes()).unwrap();
-                                
+
                             })
                     );
 
