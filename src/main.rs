@@ -429,7 +429,7 @@ fn main() {
                         "from {} to {} conversation",
                         addr_us, addr_to
                     )));
-                    conv.add_child(TextArea::new().content("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. ").disabled());
+                    conv.add_child(TextArea::new().content("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. ").disabled().with_name("Chat"));
                     conv.add_child(DummyView.fixed_height(1));
                     let mut answer = LinearLayout::horizontal();
                     answer.add_child(TextArea::new().with_name("message"));
@@ -443,6 +443,19 @@ fn main() {
                     siv.pop_layer();
                     siv.pop_layer();
                     siv.add_fullscreen_layer(conv);
+
+                    let cb_sink = siv.cb_sink().clone();
+
+                    std::thread::spawn(move || {
+                        std::thread::sleep(std::time::Duration::from_secs(2));
+                        cb_sink
+                            .send(Box::new(|s| {
+                                s.call_on_name("Chat", |view: &mut TextArea| {
+                                    view.set_content("saasasd");
+                                });
+                            }))
+                            .unwrap();
+                    });
 
                     siv.run();
                 }
