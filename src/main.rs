@@ -1,6 +1,6 @@
 use base64::{Engine as _, engine::general_purpose};
 use cursive::{
-    Cursive, CursiveExt, backend,
+    CbSink, Cursive, CursiveExt, backend,
     event::{Event, Key},
     view::{self, Nameable, Resizable},
     views::{
@@ -237,13 +237,12 @@ fn main() {
         main.add_child(
             Dialog::new()
                 .title("Menu")
-                .button("Delete history", |siv|{siv.add_layer(Dialog::new().title("Warning").content(TextView::new("This action will delete all history")).button("Ok", |siv|{
+                .content(LinearLayout::vertical().child(Button::new("Delete history", |siv|{siv.add_layer(Dialog::new().title("Warning").content(TextView::new("This action will delete all history")).button("Ok", |siv|{
                     for entry in fs::read_dir("history").unwrap() {
                         fs::remove_file(entry.unwrap().path()).unwrap();
                     }
                     siv.pop_layer();
-                }).button("No", |siv|{siv.pop_layer();}));})
-                .button("Change longterm address us", |siv| {
+                }).button("No", |siv|{siv.pop_layer();}));})).child(Button::new("Change longterm address us", |siv| {
                     siv.add_layer(
                         Dialog::new()
                             .content(TextArea::new().with_name("longterm_addr_us"))
@@ -269,7 +268,7 @@ fn main() {
                             })
                     );
 
-                }),
+                })))
         );
         siv.add_layer(main);
         siv.run();
@@ -383,6 +382,7 @@ fn main() {
                     private.clone(),
                     addr_to.to_string(),
                     saved_config.save_history,
+                    None,
                 );
                 let thread_sender = start_thread_sender(addr_to.to_string(), public_conv.clone());
 
@@ -413,16 +413,18 @@ fn main() {
                 );
 
                 println!("to {addr_to} us {addr_us}");
+                let mut siv = Cursive::default();
+                let cb_sink = siv.cb_sink().clone();
 
                 let thread_listen = start_thread_listener(
                     addr_us.clone(),
                     private.clone(),
                     addr_to.to_string(),
                     saved_config.save_history,
+                    Some(&cb_sink),
                 );
 
                 println!("time spended for connect {}sec", timer.elapsed().as_secs());
-                let mut siv = Cursive::default();
                 if saved_config.tui_interface {
                     let mut conv = LinearLayout::vertical();
                     conv.add_child(TextView::new(format!(
@@ -444,14 +446,12 @@ fn main() {
                     siv.pop_layer();
                     siv.add_fullscreen_layer(conv);
 
-                    let cb_sink = siv.cb_sink().clone();
-
                     std::thread::spawn(move || {
                         std::thread::sleep(std::time::Duration::from_secs(2));
                         cb_sink
                             .send(Box::new(|s| {
                                 s.call_on_name("Chat", |view: &mut TextArea| {
-                                    view.set_content("saasasd");
+                                    view.set_content("aboba");
                                 });
                             }))
                             .unwrap();
@@ -534,7 +534,9 @@ fn start_thread_listener(
     private_us: String,
     addr_to: String,
     save_history: bool,
+    sink: Option<&CbSink>,
 ) -> JoinHandle<()> {
+    let sink = sink.unwrap();
     let thread_listen = thread::spawn(move || {
         let listener = TcpListener::bind(addr_us.clone());
         match listener {
