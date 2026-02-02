@@ -421,7 +421,7 @@ fn main() {
                     private.clone(),
                     addr_to.to_string(),
                     saved_config.save_history,
-                    Some(&cb_sink),
+                    Some(cb_sink.clone()),
                 );
 
                 println!("time spended for connect {}sec", timer.elapsed().as_secs());
@@ -446,17 +446,7 @@ fn main() {
                     siv.pop_layer();
                     siv.add_fullscreen_layer(conv);
 
-                    std::thread::spawn(move || {
-                        std::thread::sleep(std::time::Duration::from_secs(2));
-                        cb_sink
-                            .send(Box::new(|s| {
-                                s.call_on_name("Chat", |view: &mut TextArea| {
-                                    view.set_content("aboba");
-                                });
-                            }))
-                            .unwrap();
-                    });
-
+                    
                     siv.run();
                 }
 
@@ -534,9 +524,8 @@ fn start_thread_listener(
     private_us: String,
     addr_to: String,
     save_history: bool,
-    sink: Option<&CbSink>,
+    sink: Option<CbSink>,
 ) -> JoinHandle<()> {
-    let sink = sink.unwrap();
     let thread_listen = thread::spawn(move || {
         let listener = TcpListener::bind(addr_us.clone());
         match listener {
@@ -549,9 +538,20 @@ fn start_thread_listener(
                         println!("from previous conversation with this adress");
                     }
                     let buf_reader_stream = BufReader::new(stream.unwrap());
+                    
                     for message in buf_reader_stream.lines() {
+                        let cb_sink = sink.clone();
                         match message {
                             Ok(message) => {
+                                if cb_sink.is_some() {
+                                    cb_sink.unwrap()
+                                        .send(Box::new(|s| {
+                                            s.call_on_name("Chat", |view: &mut TextArea| {
+                                                view.set_content("aboba");
+                                            });
+                                        }))
+                                        .unwrap();
+                                }
                                 message.print_message(private_us.clone());
                                 if save_history {
                                     message.log_message(addr_to.as_str(), private_us.as_str());

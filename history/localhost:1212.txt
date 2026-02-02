@@ -20,3 +20,7 @@ cargo r // 22:40/decrypted / from convensator
 asdf // 23:32/decrypted / from convensator
 asdfdf // 22:14/decrypted / from convensator
 cargo r // 23:2/decrypted / from convensator
+asd // 17:36/decrypted / from convensator
+asdwd // 17:36/decrypted / from convensator
+asdf // 17:37/decrypted / from convensator
+adsfasdf // 17:37/decrypted / from convensator
