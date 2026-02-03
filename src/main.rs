@@ -2,9 +2,10 @@ use base64::{Engine as _, engine::general_purpose};
 use cursive::{
     CbSink, Cursive, CursiveExt, backend,
     event::{Event, Key},
-    view::{self, Nameable, Resizable},
+    view::{self, Nameable, Resizable, Scrollable},
     views::{
-        Button, Dialog, DummyView, Layer, LinearLayout, OnEventView, StackView, TextArea, TextView,
+        Button, Dialog, DummyView, Layer, LinearLayout, OnEventView, ScrollView, StackView,
+        TextArea, TextView,
     },
 };
 use std::{
@@ -164,7 +165,7 @@ fn main() {
                             })
                             .button("Cancel", |s| {
                                 s.pop_layer();
-                            }),).child(Dialog::new().title(format!("From previous convs with {}",file_name.clone()[..file_name.len() - 4].to_string())).content(TextArea::new().disabled().content(fs::read_to_string(format!("history/{}",file_name.clone())).unwrap_or_default())))
+                            }),).child(Dialog::new().title(format!("From previous convs with {}",file_name.clone()[..file_name.len() - 4].to_string())).content(TextArea::new().disabled().content(fs::read_to_string(format!("history/{}",file_name.clone())).unwrap_or_default())).scrollable())
                     );
 
                 },
@@ -431,7 +432,8 @@ fn main() {
                         "from {} to {} conversation",
                         addr_us, addr_to
                     )));
-                    conv.add_child(TextArea::new().content("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. ").disabled().with_name("Chat"));
+
+                    conv.add_child((TextArea::new().content("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. ").disabled().with_name("Chat")).scrollable().scroll_strategy(view::ScrollStrategy::StickToBottom));
                     conv.add_child(DummyView.fixed_height(1));
                     let mut answer = LinearLayout::horizontal();
                     answer.add_child(TextArea::new().with_name("message"));
@@ -446,7 +448,6 @@ fn main() {
                     siv.pop_layer();
                     siv.add_fullscreen_layer(conv);
 
-                    
                     siv.run();
                 }
 
@@ -464,7 +465,7 @@ fn main() {
     }
 }
 fn encrypt_message(message: String, public_to: String) -> String {
-    if (public_to.is_empty()) {
+    if public_to.is_empty() {
         return message.trim().to_string();
     }
     let pub_key =
@@ -538,21 +539,29 @@ fn start_thread_listener(
                         println!("from previous conversation with this adress");
                     }
                     let buf_reader_stream = BufReader::new(stream.unwrap());
-                    
+
                     for message in buf_reader_stream.lines() {
                         let cb_sink = sink.clone();
                         match message {
                             Ok(message) => {
                                 if cb_sink.is_some() {
-                                    cb_sink.unwrap()
-                                        .send(Box::new(|s| {
+                                    let mes = message.clone();
+                                    let private_us = private_us.clone();
+                                    cb_sink
+                                        .unwrap()
+                                        .send(Box::new(move |s| {
                                             s.call_on_name("Chat", |view: &mut TextArea| {
-                                                view.set_content("aboba");
+                                                let content = view.get_content();
+                                                view.set_content(
+                                                    content.to_string()
+                                                        + decrypt_message(mes, private_us).as_str(),
+                                                );
                                             });
                                         }))
                                         .unwrap();
+                                } else {
+                                    message.print_message(private_us.clone());
                                 }
-                                message.print_message(private_us.clone());
                                 if save_history {
                                     message.log_message(addr_to.as_str(), private_us.as_str());
                                 }
