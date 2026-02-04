@@ -451,11 +451,21 @@ fn main() {
                     siv.run();
                 }
 
+                if saved_config.tui_interface {
+                    let sender = create_sender_tui(cb_sink, addr_to.to_string(), public);
+                    let thread_sender =
+                        start_thread_sender(addr_to.to_string(), public_conv.to_string());
+                    thread_sender.join().unwrap();
+                } else {
+                    let thread_sender =
+                        start_thread_sender(addr_to.to_string(), public_conv.to_string());
+                    thread_sender.join().unwrap();
+                }
+
                 let thread_sender =
                     start_thread_sender(addr_to.to_string(), public_conv.to_string());
 
                 thread_listen.join().unwrap();
-                thread_sender.join().unwrap();
 
                 siv.quit();
             }
@@ -611,4 +621,27 @@ fn start_thread_sender(addr_to: String, public_to: String) -> JoinHandle<()> {
         }
     });
     thread_sender
+}
+fn create_sender_tui(
+    sink: CbSink,
+    addr_to: String,
+    public_to: String,
+) -> Result<TcpSender, String> {
+    let mut sender = TcpSender::new(addr_to.trim().to_string(), 60); //drops stream if goes out of scope
+
+    match sender {
+        Ok(_) => loop {
+            let mut message = "".to_string();
+            io::stdin().read_line(&mut message).unwrap();
+            match sender
+                .as_mut()
+                .unwrap()
+                .reply(encrypt_message(message, public_to.clone()) + "\n")
+            {
+                Ok(_) => Ok(sender.as_ref().unwrap()),
+                Err(e) => Err(e),
+            };
+        },
+        Err(e) => Err(e),
+    }
 }
