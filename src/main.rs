@@ -414,60 +414,23 @@ fn main() {
                 );
 
                 println!("to {addr_to} us {addr_us}");
-                let mut siv = Cursive::default();
-                let cb_sink = siv.cb_sink().clone();
 
                 let thread_listen = start_thread_listener(
                     addr_us.clone(),
                     private.clone(),
                     addr_to.to_string(),
                     saved_config.save_history,
-                    Some(cb_sink.clone()),
+                    None,
                 );
 
                 println!("time spended for connect {}sec", timer.elapsed().as_secs());
-                if saved_config.tui_interface {
-                    let mut conv = LinearLayout::vertical();
-                    conv.add_child(TextView::new(format!(
-                        "from {} to {} conversation",
-                        addr_us, addr_to
-                    )));
-
-                    conv.add_child((TextArea::new().content("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. ").disabled().with_name("Chat")).scrollable().scroll_strategy(view::ScrollStrategy::StickToBottom));
-                    conv.add_child(DummyView.fixed_height(1));
-                    let mut answer = LinearLayout::horizontal();
-                    answer.add_child(TextArea::new().with_name("message"));
-                    answer.add_child(Button::new("reply", |s| {
-                        let message = s.call_on_name("message", |h: &mut TextArea| {
-                            h.get_content().to_string()
-                        });
-                        s.set_user_data(message.unwrap());
-                    }));
-                    conv.add_child(answer);
-                    siv.pop_layer();
-                    siv.pop_layer();
-                    siv.add_fullscreen_layer(conv);
-
-                    siv.run();
-                }
-
-                if saved_config.tui_interface {
-                    let sender = create_sender_tui(cb_sink, addr_to.to_string(), public);
-                    let thread_sender =
-                        start_thread_sender(addr_to.to_string(), public_conv.to_string());
-                    thread_sender.join().unwrap();
-                } else {
-                    let thread_sender =
-                        start_thread_sender(addr_to.to_string(), public_conv.to_string());
-                    thread_sender.join().unwrap();
-                }
 
                 let thread_sender =
                     start_thread_sender(addr_to.to_string(), public_conv.to_string());
 
                 thread_listen.join().unwrap();
 
-                siv.quit();
+                
             }
         }
 
