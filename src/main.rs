@@ -363,47 +363,23 @@ fn main() {
 
             });
             */
-            if addr_to.trim().is_empty() {
-                let handshake = start_listening_handshake(addr_us.as_str()).unwrap();
-                let timer = Instant::now();
-                let begin_public = handshake.find("public:").unwrap();
-                let addr_to = &handshake.as_str()[14..begin_public];
-                let public_conv = &handshake.as_str()[begin_public + 8..&handshake.len() - 1]
-                    .replace("\\n", "\n");
-                println!(
-                    "gotted handshake! from {addr_to}\nand public {}",
-                    public_conv
-                );
-                println!("{}", public_conv);
-                send_handshake(addr_to.to_string(), addr_us.clone(), public.clone()).unwrap();
-                println!("sended handshake");
 
-                let thread_listen = start_thread_listener(
-                    addr_us.clone(),
-                    private.clone(),
-                    addr_to.to_string(),
-                    saved_config.save_history,
-                    None,
-                );
-                let thread_sender = start_thread_sender(addr_to.to_string(), public_conv.clone());
+            //let thread_sender = start_thread_sender(addr_to);
+            println!("Sending handshake");
+            let addr_us_clone = addr_us.clone();
 
-                println!("time spended for connect {}sec", timer.elapsed().as_secs());
+            let handshake_thread =
+                thread::spawn(move || start_listening_handshake(addr_us_clone.as_str()).unwrap());
 
-                thread_listen.join().unwrap();
-                thread_sender.join().unwrap();
+            let mut handshake = String::new();
+
+            if !addr_to.is_empty() {
+                send_handshake(addr_to, addr_us.clone(), public);
+                handshake = handshake_thread.join().unwrap();
             } else {
-                //let thread_sender = start_thread_sender(addr_to);
-                println!("Sending handshake");
-                let addr_us_clone = addr_us.clone();
-
-                let handshake_thread = thread::spawn(move || {
-                    start_listening_handshake(addr_us_clone.as_str()).unwrap()
-                });
-                send_handshake(addr_to.clone(), addr_us.clone(), public.clone()).unwrap();
-                println!("sended handshake");
-
-                let handshake = handshake_thread.join().unwrap();
+                handshake = handshake_thread.join().unwrap();
                 let timer = Instant::now();
+                println!("{handshake}");
                 let begin_public = handshake.find("public:").unwrap();
                 let addr_to = &handshake.as_str()[14..begin_public];
                 let public_conv = &handshake.as_str()[begin_public + 8..&handshake.len() - 1]
@@ -412,26 +388,36 @@ fn main() {
                     "gotted handshake! from {addr_to}\nand public {}",
                     public_conv
                 );
-
-                println!("to {addr_to} us {addr_us}");
-
-                let thread_listen = start_thread_listener(
-                    addr_us.clone(),
-                    private.clone(),
-                    addr_to.to_string(),
-                    saved_config.save_history,
-                    None,
-                );
-
-                println!("time spended for connect {}sec", timer.elapsed().as_secs());
-
-                let thread_sender =
-                    start_thread_sender(addr_to.to_string(), public_conv.to_string());
-
-                thread_listen.join().unwrap();
-
-                
+                send_handshake(addr_to.to_string(), addr_us.clone(), public).unwrap();
             }
+
+            let timer = Instant::now();
+            println!("{handshake}");
+            let begin_public = handshake.find("public:").unwrap();
+            let addr_to = &handshake.as_str()[14..begin_public];
+            let public_conv =
+                &handshake.as_str()[begin_public + 8..&handshake.len() - 1].replace("\\n", "\n");
+            println!(
+                "gotted handshake! from {addr_to}\nand public {}",
+                public_conv
+            );
+
+            println!("to {addr_to} us {addr_us}");
+
+            let thread_listen = start_thread_listener(
+                addr_us.clone(),
+                private.clone(),
+                addr_to.to_string(),
+                saved_config.save_history,
+                None,
+            );
+
+            println!("time spended for connect {}sec", timer.elapsed().as_secs());
+
+            let thread_sender = start_thread_sender(addr_to.to_string(), public_conv.to_string());
+
+            thread_listen.join().unwrap();
+            thread_sender.join().unwrap();
         }
 
         &_ => {}
