@@ -79,3 +79,10 @@ fdfsdfasdf // 0:1/decrypted / from convensator
 asdf // 0:2/decrypted / from convensator
 asdfasdf // 0:2/decrypted / from convensator
 asdf // 23:20/decrypted / from convensator
+asdf // 22:39/decrypted / from convensator
+sadfdasf // 22:39/decrypted / from convensator
+sadfsadfdsfa // 22:39/decrypted / from convensator
+Oh shit it works now! // 23:23/decrypted / from convensator
+asdfaesfas // 23:24/decrypted / from convensator
+easfsafeas // 23:25/decrypted / from convensator
+ // 23:25/decrypted / from convensator

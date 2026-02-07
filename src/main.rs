@@ -404,20 +404,85 @@ fn main() {
 
             println!("to {addr_to} us {addr_us}");
 
-            let thread_listen = start_thread_listener(
-                addr_us.clone(),
-                private.clone(),
-                addr_to.to_string(),
-                saved_config.save_history,
-                None,
-            );
+            if saved_config.tui_interface {
+                let mut siv = Cursive::default();
 
-            println!("time spended for connect {}sec", timer.elapsed().as_secs());
+                let mut conv = LinearLayout::vertical();
 
-            let thread_sender = start_thread_sender(addr_to.to_string(), public_conv.to_string());
+                let thread_listen = start_thread_listener(
+                    addr_us.clone(),
+                    private.clone(),
+                    addr_to.to_string(),
+                    saved_config.save_history,
+                    Some(siv.cb_sink().clone()),
+                );
 
-            thread_listen.join().unwrap();
-            thread_sender.join().unwrap();
+                let send_stream =
+                    Arc::from(Mutex::from(create_sender_tui(addr_to.to_string()).unwrap()));
+                conv.add_child(TextView::new(format!(
+                    "from {} to {} conversation",
+                    addr_us, addr_to
+                )));
+
+                conv.add_child(
+                    (TextArea::new()
+                        .content("ris niscillumest laborum. ")
+                        .disabled()
+                        .with_name("Chat"))
+                    .scrollable()
+                    .scroll_strategy(view::ScrollStrategy::StickToBottom),
+                );
+                conv.add_child(DummyView.fixed_height(1));
+                let mut answer = LinearLayout::horizontal();
+                answer.add_child(TextArea::new().with_name("message"));
+                let public_to: Arc<String> = Arc::from(public_conv.to_string().clone());
+                answer.add_child(Button::new("reply", move |s| {
+                    let message = s.call_on_name("message", |h: &mut TextArea| {
+                        let content = h.get_content().to_string();
+                        h.set_content("");
+                        content
+                    });
+                    if public_to.clone().is_empty() {
+                        send_stream
+                            .clone()
+                            .lock()
+                            .unwrap()
+                            .reply(message.unwrap() + "\n")
+                            .unwrap();
+                    } else {
+                        send_stream
+                            .clone()
+                            .lock()
+                            .unwrap()
+                            .reply(
+                                encrypt_message(message.unwrap(), public_to.clone().to_string())
+                                    + "\n",
+                            )
+                            .unwrap();
+                    }
+                }));
+                conv.add_child(answer);
+                siv.pop_layer();
+                siv.pop_layer();
+                siv.add_fullscreen_layer(conv);
+
+                siv.run();
+
+                thread_listen.join().unwrap();
+            } else {
+                let thread_listen = start_thread_listener(
+                    addr_us.clone(),
+                    private.clone(),
+                    addr_to.to_string(),
+                    saved_config.save_history,
+                    None,
+                );
+                let thread_sender =
+                    start_thread_sender(addr_to.to_string(), public_conv.to_string());
+                println!("time spended for connect {}sec", timer.elapsed().as_secs());
+
+                thread_sender.join().unwrap();
+            }
         }
 
         &_ => {}
@@ -513,7 +578,8 @@ fn start_thread_listener(
                                                 let content = view.get_content();
                                                 view.set_content(
                                                     content.to_string()
-                                                        + decrypt_message(mes, private_us).as_str(),
+                                                        + decrypt_message(mes, private_us).as_str()
+                                                        + "\n",
                                                 );
                                             });
                                         }))
@@ -571,26 +637,7 @@ fn start_thread_sender(addr_to: String, public_to: String) -> JoinHandle<()> {
     });
     thread_sender
 }
-fn create_sender_tui(
-    sink: CbSink,
-    addr_to: String,
-    public_to: String,
-) -> Result<TcpSender, String> {
+fn create_sender_tui(addr_to: String) -> Result<TcpSender, String> {
     let mut sender = TcpSender::new(addr_to.trim().to_string(), 60); //drops stream if goes out of scope
-
-    match sender {
-        Ok(_) => loop {
-            let mut message = "".to_string();
-            io::stdin().read_line(&mut message).unwrap();
-            match sender
-                .as_mut()
-                .unwrap()
-                .reply(encrypt_message(message, public_to.clone()) + "\n")
-            {
-                Ok(_) => Ok(sender.as_ref().unwrap()),
-                Err(e) => Err(e),
-            };
-        },
-        Err(e) => Err(e),
-    }
+    sender
 }

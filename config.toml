@@ -1,4 +1,4 @@
 addr_us = "localhost:2424"
 encryption = true
 save_history = true
-tui_interface = false
+tui_interface = true
