@@ -1,8 +1,8 @@
 use base64::{Engine as _, engine::general_purpose};
 use cursive::{
-    CbSink, Cursive, CursiveExt, backend,
+    CbSink, Cursive, CursiveExt, View, backend,
     event::{Event, Key},
-    view::{self, Nameable, Resizable, Scrollable},
+    view::{self, Nameable, Resizable, Scrollable, Selector},
     views::{
         Button, Dialog, DummyView, Layer, LinearLayout, OnEventView, ScrollView, StackView,
         TextArea, TextView,
@@ -374,7 +374,7 @@ fn main() {
             let mut handshake = String::new();
 
             if !addr_to.is_empty() {
-                send_handshake(addr_to, addr_us.clone(), public);
+                send_handshake(addr_to, addr_us.clone(), public.clone());
                 handshake = handshake_thread.join().unwrap();
             } else {
                 handshake = handshake_thread.join().unwrap();
@@ -388,7 +388,7 @@ fn main() {
                     "gotted handshake! from {addr_to}\nand public {}",
                     public_conv
                 );
-                send_handshake(addr_to.to_string(), addr_us.clone(), public).unwrap();
+                send_handshake(addr_to.to_string(), addr_us.clone(), public.clone()).unwrap();
             }
 
             let timer = Instant::now();
@@ -420,28 +420,31 @@ fn main() {
                 let send_stream =
                     Arc::from(Mutex::from(create_sender_tui(addr_to.to_string()).unwrap()));
                 conv.add_child(TextView::new(format!(
-                    "from {} to {} conversation",
-                    addr_us, addr_to
+                    "from {} to {} conversation. Encryption: our: {} their: {}",
+                    addr_us,
+                    addr_to,
+                    !public.is_empty(),
+                    !public_conv.is_empty()
                 )));
 
                 conv.add_child(
-                    (TextArea::new()
-                        .content("ris niscillumest laborum. ")
-                        .disabled()
-                        .with_name("Chat"))
-                    .scrollable()
-                    .scroll_strategy(view::ScrollStrategy::StickToBottom),
+                    (TextArea::new().content("").disabled().with_name("Chat"))
+                        .scrollable()
+                        .scroll_strategy(view::ScrollStrategy::StickToBottom),
                 );
                 conv.add_child(DummyView.fixed_height(1));
                 let mut answer = LinearLayout::horizontal();
                 answer.add_child(TextArea::new().with_name("message"));
                 let public_to: Arc<String> = Arc::from(public_conv.to_string().clone());
                 answer.add_child(Button::new("reply", move |s| {
+                    s.focus_name("message").unwrap();
                     let message = s.call_on_name("message", |h: &mut TextArea| {
                         let content = h.get_content().to_string();
                         h.set_content("");
+
                         content
                     });
+
                     if public_to.clone().is_empty() {
                         send_stream
                             .clone()
@@ -467,8 +470,6 @@ fn main() {
                 siv.add_fullscreen_layer(conv);
 
                 siv.run();
-
-                thread_listen.join().unwrap();
             } else {
                 let thread_listen = start_thread_listener(
                     addr_us.clone(),
@@ -502,15 +503,19 @@ fn encrypt_message(message: String, public_to: String) -> String {
     encrypted_b64
 }
 fn decrypt_message(message: String, private_us: String) -> String {
-    let decrypted_b64 = general_purpose::STANDARD
-        .decode(&message)
-        .expect("Failed to decode base64");
-    let priv_key =
-        RsaPrivateKey::from_pkcs8_pem(private_us.as_str()).expect("unable to read priv_key");
-    let decrypted = priv_key
-        .decrypt(Oaep::new::<Sha256>(), &decrypted_b64)
-        .unwrap();
-    String::from_utf8(decrypted).unwrap()
+    if private_us.is_empty() {
+        message
+    } else {
+        let decrypted_b64 = general_purpose::STANDARD
+            .decode(&message)
+            .expect("Failed to decode base64");
+        let priv_key =
+            RsaPrivateKey::from_pkcs8_pem(private_us.as_str()).expect("unable to read priv_key");
+        let decrypted = priv_key
+            .decrypt(Oaep::new::<Sha256>(), &decrypted_b64)
+            .unwrap();
+        String::from_utf8(decrypted).unwrap()
+    }
 }
 
 fn send_handshake(addr_to: String, addr_us: String, public_key: String) -> Result<(), String> {
@@ -556,6 +561,7 @@ fn start_thread_listener(
         match listener {
             Ok(_) => {
                 for stream in listener.unwrap().incoming() {
+                    let cb_sink = sink.clone();
                     println!("Got stream connection");
                     if let Err(err) = print_log(addr_to.as_str()) {
                         println!("{err}");
@@ -594,8 +600,21 @@ fn start_thread_listener(
                             Err(_) => break,
                         }
                     }
-
-                    println!("connection closed");
+                    if cb_sink.is_some() {
+                        cb_sink
+                            .unwrap()
+                            .send(Box::new(move |s| {
+                                s.add_layer(
+                                    Dialog::new()
+                                        .title("Disconection")
+                                        .content(TextView::new(
+                                            "Conversator has dropped connection.",
+                                        ))
+                                        .button("exit", |s| s.quit()),
+                                );
+                            }))
+                            .unwrap();
+                    }
                 }
             }
             Err(_) => {
