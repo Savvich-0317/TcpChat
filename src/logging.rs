@@ -57,8 +57,8 @@ pub fn print_log(addr_to: &str) -> Result<(), &str> {
                 .unwrap();
             let width = term_size::dimensions().unwrap().0;
             for line in buffer.trim().split("\n") {
-                let msg = line[..line.find(" //").unwrap()].to_string();
-                let status = line[line.find(" //").unwrap()..].to_string();
+                let msg = line[..line.find(" //").unwrap_or_default()].to_string();
+                let status = line[line.find(" //").unwrap_or_default()..].to_string();
                 if msg.len() % width < width - status.len() {
                     let content = format!(
                         "{}",

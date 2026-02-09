@@ -419,18 +419,22 @@ fn main() {
 
                 let send_stream =
                     Arc::from(Mutex::from(create_sender_tui(addr_to.to_string()).unwrap()));
-                conv.add_child(TextView::new(format!(
-                    "from {} to {} conversation. Encryption: our: {} their: {}",
-                    addr_us,
-                    addr_to,
-                    !public.is_empty(),
-                    !public_conv.is_empty()
-                )));
+                conv.add_child(
+                    TextView::new(format!(
+                        "from {} to {} conversation. Encryption: our: {} their: {}",
+                        addr_us,
+                        addr_to,
+                        !public.is_empty(),
+                        !public_conv.is_empty()
+                    ))
+                    .full_width(),
+                );
 
                 conv.add_child(
                     (TextArea::new().content("").disabled().with_name("Chat"))
                         .scrollable()
-                        .scroll_strategy(view::ScrollStrategy::StickToBottom),
+                        .scroll_strategy(view::ScrollStrategy::StickToBottom)
+                        .full_width(),
                 );
                 conv.add_child(DummyView.fixed_height(1));
                 let mut answer = LinearLayout::horizontal();
@@ -446,6 +450,13 @@ fn main() {
                     });
 
                     if public_to.clone().is_empty() {
+                        let chat = s.call_on_name("Chat", |h: &mut TextArea| {
+                            h.set_content(
+                                h.get_content().to_string()
+                                    + message.clone().unwrap().as_str()
+                                    + "    [our]\n",
+                            );
+                        });
                         send_stream
                             .clone()
                             .lock()
@@ -453,6 +464,13 @@ fn main() {
                             .reply(message.unwrap() + "\n")
                             .unwrap();
                     } else {
+                        let chat = s.call_on_name("Chat", |h: &mut TextArea| {
+                            h.set_content(
+                                h.get_content().to_string()
+                                    + message.clone().unwrap().as_str()
+                                    + "    [our secured]\n",
+                            );
+                        });
                         send_stream
                             .clone()
                             .lock()
@@ -582,11 +600,21 @@ fn start_thread_listener(
                                         .send(Box::new(move |s| {
                                             s.call_on_name("Chat", |view: &mut TextArea| {
                                                 let content = view.get_content();
-                                                view.set_content(
-                                                    content.to_string()
-                                                        + decrypt_message(mes, private_us).as_str()
-                                                        + "\n",
-                                                );
+                                                if private_us.is_empty() {
+                                                    view.set_content(
+                                                        content.to_string()
+                                                            + decrypt_message(mes, private_us)
+                                                                .as_str()
+                                                            + "    [conversator]\n",
+                                                    );
+                                                } else {
+                                                    view.set_content(
+                                                        content.to_string()
+                                                            + decrypt_message(mes, private_us)
+                                                                .as_str()
+                                                            + "    [conversator secured]\n",
+                                                    );
+                                                }
                                             });
                                         }))
                                         .unwrap();
