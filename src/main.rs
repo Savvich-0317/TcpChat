@@ -8,8 +8,10 @@ use cursive::{
         TextArea, TextView,
     },
 };
+use rodio::Decoder;
+
 use std::{
-    fs,
+    fs::{self, File},
     io::{self, BufRead, BufReader, Read, Write},
     net::TcpListener,
     path::Display,
@@ -48,6 +50,9 @@ struct ReadedData {
 }
 fn main() {
     println!("TcpChat");
+
+    thread::spawn(||play_sound("sounds/notify 2.mp3"));
+    
 
     let content = fs::read_to_string("config.toml").unwrap();
     let mut saved_config: Config = toml::from_str(content.as_str()).unwrap();
@@ -687,4 +692,13 @@ fn start_thread_sender(addr_to: String, public_to: String) -> JoinHandle<()> {
 fn create_sender_tui(addr_to: String) -> Result<TcpSender, String> {
     let mut sender = TcpSender::new(addr_to.trim().to_string(), 60); //drops stream if goes out of scope
     sender
+}
+fn play_sound(path: &str) {
+    let stream_handle =
+        rodio::OutputStreamBuilder::open_default_stream().expect("open default audio stream");
+    let sink = rodio::Sink::connect_new(&stream_handle.mixer());
+    let file = File::open(path).unwrap();
+    let source = Decoder::try_from(file).unwrap();
+    sink.append(source);
+    sink.sleep_until_end();
 }
