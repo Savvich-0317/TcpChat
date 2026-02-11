@@ -8,6 +8,7 @@ use cursive::{
         TextArea, TextView,
     },
 };
+use gag::Gag;
 use rodio::Decoder;
 
 use std::{
@@ -80,7 +81,7 @@ fn main() {
             "There is no encryption keys! You can generate pair with generate_my_keys.sh in directory!"
         );
     }
-
+    let print_gag = Gag::stdout().unwrap();
     if !saved_config.encryption {
         private = "".to_string();
         public = "".to_string();
@@ -597,6 +598,7 @@ fn start_thread_listener(
                         let cb_sink = sink.clone();
                         match message {
                             Ok(message) => {
+                                thread::spawn(||play_sound("sounds/notify 2.mp3"));
                                 if cb_sink.is_some() {
                                     let mes = message.clone();
                                     let private_us = private_us.clone();
@@ -694,6 +696,7 @@ fn create_sender_tui(addr_to: String) -> Result<TcpSender, String> {
     sender
 }
 fn play_sound(path: &str) {
+    let print_gag = Gag::stdout();
     let stream_handle =
         rodio::OutputStreamBuilder::open_default_stream().expect("open default audio stream");
     let sink = rodio::Sink::connect_new(&stream_handle.mixer());
