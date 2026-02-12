@@ -12,6 +12,7 @@ use gag::Gag;
 use rodio::Decoder;
 
 use std::{
+    cell::RefCell,
     fs::{self, File},
     io::{self, BufRead, BufReader, Read, Write},
     net::TcpListener,
@@ -52,9 +53,6 @@ struct ReadedData {
 fn main() {
     println!("TcpChat");
 
-    thread::spawn(||play_sound("sounds/notify 2.mp3"));
-    
-
     let content = fs::read_to_string("config.toml").unwrap();
     let mut saved_config: Config = toml::from_str(content.as_str()).unwrap();
 
@@ -81,7 +79,7 @@ fn main() {
             "There is no encryption keys! You can generate pair with generate_my_keys.sh in directory!"
         );
     }
-    let print_gag = Gag::stdout().unwrap();
+
     if !saved_config.encryption {
         private = "".to_string();
         public = "".to_string();
@@ -335,6 +333,18 @@ fn main() {
         }
 
         "3" => {
+            let print_gag = Gag::stdout().unwrap();
+
+            if saved_config.tui_interface {
+                thread::spawn(|| {
+                    let mut siv = Cursive::new();
+                    siv.add_layer(TextView::new("connecting..."));
+                    siv.run();
+                });
+            } else {
+                drop(print_gag);
+            }
+
             if addr_to.is_empty() && addr_us.is_empty() {
                 println!("who is we chatting with? Leave blank if we want use handshake");
                 std::io::stdin().read_line(&mut addr_to).unwrap();
@@ -598,7 +608,7 @@ fn start_thread_listener(
                         let cb_sink = sink.clone();
                         match message {
                             Ok(message) => {
-                                thread::spawn(||play_sound("sounds/notify 2.mp3"));
+                                thread::spawn(|| play_sound("sounds/notify 2.mp3"));
                                 if cb_sink.is_some() {
                                     let mes = message.clone();
                                     let private_us = private_us.clone();
@@ -696,7 +706,7 @@ fn create_sender_tui(addr_to: String) -> Result<TcpSender, String> {
     sender
 }
 fn play_sound(path: &str) {
-    let print_gag = Gag::stdout();
+    let print_gag = Gag::stderr().unwrap();
     let stream_handle =
         rodio::OutputStreamBuilder::open_default_stream().expect("open default audio stream");
     let sink = rodio::Sink::connect_new(&stream_handle.mixer());
