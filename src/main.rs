@@ -337,8 +337,21 @@ fn main() {
 
             if saved_config.tui_interface {
                 thread::spawn(|| {
-                    let mut siv = Cursive::new();
+                    let mut siv = Cursive::default();
                     siv.add_layer(TextView::new("connecting..."));
+                                    //борровит, клонит, отпускает
+                    let cb_sink = { siv.cb_sink().clone() };
+                    thread::spawn(move || {
+                        while fs::File::open("connected").is_err() {
+                            thread::sleep(Duration::from_secs(1));
+                        }
+
+                        fs::remove_file("connected");
+
+                        cb_sink.send(Box::new(|s| {
+                            s.quit();
+                        }));
+                    });
                     siv.run();
                 });
             } else {
@@ -417,7 +430,8 @@ fn main() {
                 "gotted handshake! from {addr_to}\nand public {}",
                 public_conv
             );
-
+            fs::File::create("connected").unwrap();
+            thread::sleep(Duration::from_secs(3));
             println!("to {addr_to} us {addr_us}");
 
             if saved_config.tui_interface {
@@ -504,6 +518,7 @@ fn main() {
                 siv.add_fullscreen_layer(conv);
 
                 siv.run();
+                thread_listen.join();
             } else {
                 let thread_listen = start_thread_listener(
                     addr_us.clone(),
