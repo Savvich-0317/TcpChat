@@ -339,7 +339,7 @@ fn main() {
                 thread::spawn(|| {
                     let mut siv = Cursive::default();
                     siv.add_layer(TextView::new("connecting..."));
-                                    //борровит, клонит, отпускает
+                    //борровит, клонит, отпускает
                     let cb_sink = { siv.cb_sink().clone() };
                     thread::spawn(move || {
                         while fs::File::open("connected").is_err() {
@@ -401,10 +401,12 @@ fn main() {
                 thread::spawn(move || start_listening_handshake(addr_us_clone.as_str()).unwrap());
 
             let mut handshake = String::new();
-
+            let mut ping = u128::default();
             if !addr_to.is_empty() {
                 send_handshake(addr_to, addr_us.clone(), public.clone());
+                let timer = Instant::now();
                 handshake = handshake_thread.join().unwrap();
+                ping = timer.elapsed().as_millis();
             } else {
                 handshake = handshake_thread.join().unwrap();
                 let timer = Instant::now();
@@ -417,10 +419,11 @@ fn main() {
                     "gotted handshake! from {addr_to}\nand public {}",
                     public_conv
                 );
+                ping = timer.elapsed().as_millis();
                 send_handshake(addr_to.to_string(), addr_us.clone(), public.clone()).unwrap();
+                
             }
 
-            let timer = Instant::now();
             println!("{handshake}");
             let begin_public = handshake.find("public:").unwrap();
             let addr_to = &handshake.as_str()[14..begin_public];
@@ -451,11 +454,12 @@ fn main() {
                     Arc::from(Mutex::from(create_sender_tui(addr_to.to_string()).unwrap()));
                 conv.add_child(
                     TextView::new(format!(
-                        "from {} to {} conversation. Encryption: our: {} their: {}",
+                        "from {} to {} conversation. Encryption: our: {} their: {} approx ping: {}",
                         addr_us,
                         addr_to,
                         !public.is_empty(),
-                        !public_conv.is_empty()
+                        !public_conv.is_empty(),
+                        ping
                     ))
                     .full_width(),
                 );
@@ -518,7 +522,6 @@ fn main() {
                 siv.add_fullscreen_layer(conv);
 
                 siv.run();
-                thread_listen.join();
             } else {
                 let thread_listen = start_thread_listener(
                     addr_us.clone(),
@@ -529,7 +532,7 @@ fn main() {
                 );
                 let thread_sender =
                     start_thread_sender(addr_to.to_string(), public_conv.to_string());
-                println!("time spended for connect {}sec", timer.elapsed().as_secs());
+                println!("time spended for connect idk lol sec");
 
                 thread_sender.join().unwrap();
             }
