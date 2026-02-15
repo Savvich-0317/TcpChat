@@ -65,6 +65,7 @@ fn main() {
     }
 
     let mut public = "".to_string();
+    static mut CONNECTED: bool = false;
     match fs::read_to_string("rsa_key_public.pem") {
         Ok(text) => public = text,
         Err(_) => {
@@ -338,19 +339,33 @@ fn main() {
             if saved_config.tui_interface {
                 thread::spawn(|| {
                     let mut siv = Cursive::default();
-                    siv.add_layer(TextView::new("connecting..."));
+                    siv.add_layer(TextView::new(" ").with_name("stick"));
                     //борровит, клонит, отпускает
                     let cb_sink = { siv.cb_sink().clone() };
                     thread::spawn(move || {
-                        while fs::File::open("connected").is_err() {
-                            thread::sleep(Duration::from_secs(1));
+                        let mut n = 0;
+                        unsafe {
+                            while !CONNECTED {
+                                thread::sleep(Duration::from_millis(100));
+                                n += 1;
+                                cb_sink
+                                    .send(Box::new(move |s| {
+                                        s.call_on_name("stick", |h: &mut TextView| {
+                                            h.set_content("-\\|/".chars().nth(n % 4).unwrap())
+                                        });
+                                    }))
+                                    .unwrap();
+                            }
                         }
 
-                        fs::remove_file("connected");
-
-                        cb_sink.send(Box::new(|s| {
-                            s.quit();
-                        }));
+                        cb_sink
+                            .send(Box::new(|s| {
+                                s.quit();
+                            }))
+                            .unwrap();
+                        unsafe {
+                            CONNECTED = false;
+                        };
                     });
                     siv.run();
                 });
@@ -421,7 +436,6 @@ fn main() {
                 );
                 ping = timer.elapsed().as_millis();
                 send_handshake(addr_to.to_string(), addr_us.clone(), public.clone()).unwrap();
-                
             }
 
             println!("{handshake}");
@@ -433,8 +447,13 @@ fn main() {
                 "gotted handshake! from {addr_to}\nand public {}",
                 public_conv
             );
-            fs::File::create("connected").unwrap();
-            thread::sleep(Duration::from_secs(3));
+            unsafe {
+                CONNECTED = true;
+                while CONNECTED {
+                    thread::sleep(Duration::from_secs(1));
+                }
+            }
+
             println!("to {addr_to} us {addr_us}");
 
             if saved_config.tui_interface {
