@@ -2,6 +2,8 @@ use base64::{Engine as _, engine::general_purpose};
 use cursive::{
     CbSink, Cursive, CursiveExt, View, backend,
     event::{Event, Key},
+    reexports::enumset::__internal::EnumSetTypeRepr,
+    utils::lines::simple::Span,
     view::{self, Nameable, Resizable, Scrollable, Selector},
     views::{
         Button, Dialog, DummyView, Layer, LinearLayout, OnEventView, ScrollView, StackView,
@@ -9,11 +11,12 @@ use cursive::{
     },
 };
 use gag::Gag;
+use rand::RngCore;
 use rodio::Decoder;
 
 use std::{
     cell::RefCell,
-    fs::{self, File},
+    fs::{self, File, ReadDir},
     io::{self, BufRead, BufReader, Read, Write},
     net::TcpListener,
     path::Display,
@@ -277,6 +280,7 @@ fn main() {
                 })))
         );
         siv.add_layer(main);
+        play_random_sound();
         siv.run();
         let user_data = siv.take_user_data::<ReadedData>().unwrap();
         println!("{} aboba {}", user_data.addr_to, user_data.addr_us);
@@ -645,7 +649,7 @@ fn start_thread_listener(
                         let cb_sink = sink.clone();
                         match message {
                             Ok(message) => {
-                                thread::spawn(|| play_sound("sounds/notify 2.mp3"));
+                                play_random_sound();
                                 if cb_sink.is_some() {
                                     let mes = message.clone();
                                     let private_us = private_us.clone();
@@ -751,4 +755,28 @@ fn play_sound(path: &str) {
     let source = Decoder::try_from(file).unwrap();
     sink.append(source);
     sink.sleep_until_end();
+}
+fn play_random_sound() {
+    thread::spawn(|| {
+        let print_gag = Gag::stderr().unwrap();
+        let stream_handle =
+            rodio::OutputStreamBuilder::open_default_stream().expect("open default audio stream");
+        let sink = rodio::Sink::connect_new(&stream_handle.mixer());
+        let mut sounds = Vec::new();
+        for entry in fs::read_dir("sounds").unwrap() {
+            let entry = entry.unwrap();
+            let path = entry.path();
+
+            if path.is_file() {
+                sounds.push(format!("{}", path.to_str().unwrap()).to_string());
+            }
+        }
+
+        let source = Decoder::try_from(
+            File::open(sounds[rand::rng().next_u32().to_usize() % sounds.len()].clone()).unwrap(),
+        )
+        .unwrap();
+        sink.append(source);
+        sink.sleep_until_end();
+    });
 }
