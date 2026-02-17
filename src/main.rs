@@ -20,7 +20,7 @@ use std::{
     io::{self, BufRead, BufReader, Read, Write},
     net::TcpListener,
     path::Display,
-    sync::{Arc, Mutex},
+    sync::{Arc, LazyLock, Mutex},
     thread::{self, JoinHandle},
     time::{Duration, Instant},
 };
@@ -68,7 +68,7 @@ fn main() {
     }
 
     let mut public = "".to_string();
-    static mut CONNECTED: bool = false;
+    static CONNECTED: LazyLock<Mutex<String>> = LazyLock::new(|| Mutex::new(String::new()));
     match fs::read_to_string("rsa_key_public.pem") {
         Ok(text) => public = text,
         Err(_) => {
@@ -349,13 +349,17 @@ fn main() {
                     thread::spawn(move || {
                         let mut n = 0;
                         unsafe {
-                            while !CONNECTED {
+                            while CONNECTED.lock().unwrap().as_str() != "connected" {
                                 thread::sleep(Duration::from_millis(100));
                                 n += 1;
                                 cb_sink
                                     .send(Box::new(move |s| {
                                         s.call_on_name("stick", |h: &mut TextView| {
-                                            h.set_content("-\\|/".chars().nth(n % 4).unwrap())
+                                            h.set_content(format!(
+                                                "{}\n{}",
+                                                CONNECTED.lock().unwrap().as_str(),
+                                                "-\\|/".chars().nth(n % 4).unwrap()
+                                            ))
                                         });
                                     }))
                                     .unwrap();
@@ -368,7 +372,8 @@ fn main() {
                             }))
                             .unwrap();
                         unsafe {
-                            CONNECTED = false;
+                            CONNECTED.lock().unwrap().clear();
+                            CONNECTED.lock().unwrap().push_str("finished");
                         };
                     });
                     siv.run();
@@ -414,6 +419,8 @@ fn main() {
 
             //let thread_sender = start_thread_sender(addr_to);
             println!("Sending handshake");
+            CONNECTED.lock().unwrap().clear();
+            CONNECTED.lock().unwrap().push_str("Sending handshake");
             let addr_us_clone = addr_us.clone();
 
             let handshake_thread =
@@ -423,11 +430,19 @@ fn main() {
             let mut ping = u128::default();
             if !addr_to.is_empty() {
                 send_handshake(addr_to, addr_us.clone(), public.clone());
+                CONNECTED.lock().unwrap().clear();
+                CONNECTED.lock().unwrap().push_str("sended handshake");
                 let timer = Instant::now();
                 handshake = handshake_thread.join().unwrap();
+                CONNECTED.lock().unwrap().clear();
+                CONNECTED.lock().unwrap().push_str("got handshake");
                 ping = timer.elapsed().as_millis();
             } else {
+                CONNECTED.lock().unwrap().clear();
+                CONNECTED.lock().unwrap().push_str("waiting for handshake");
                 handshake = handshake_thread.join().unwrap();
+                CONNECTED.lock().unwrap().clear();
+                CONNECTED.lock().unwrap().push_str("got handshake");
                 let timer = Instant::now();
                 println!("{handshake}");
                 let begin_public = handshake.find("public:").unwrap();
@@ -440,6 +455,8 @@ fn main() {
                 );
                 ping = timer.elapsed().as_millis();
                 send_handshake(addr_to.to_string(), addr_us.clone(), public.clone()).unwrap();
+                CONNECTED.lock().unwrap().clear();
+                CONNECTED.lock().unwrap().push_str("sended handshake");
             }
 
             println!("{handshake}");
@@ -451,9 +468,10 @@ fn main() {
                 "gotted handshake! from {addr_to}\nand public {}",
                 public_conv
             );
+            CONNECTED.lock().unwrap().clear();
             unsafe {
-                CONNECTED = true;
-                while CONNECTED {
+                CONNECTED.lock().unwrap().push_str("connected");
+                while CONNECTED.lock().unwrap().as_str() != "finished" {
                     thread::sleep(Duration::from_secs(1));
                 }
             }
