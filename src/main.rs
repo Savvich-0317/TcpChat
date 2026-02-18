@@ -561,7 +561,29 @@ fn main() {
                 siv.pop_layer();
                 siv.pop_layer();
                 siv.add_fullscreen_layer(conv);
+                siv.add_global_callback(Key::Esc, |s| {
+                    s.add_layer(
+                        Dialog::around(TextView::new("Closing conv in ").with_name("timer"))
+                            .button("Cancel", |s| {
+                                s.pop_layer();
+                            }),
+                    );
+                    let cb_sink = s.cb_sink().clone();
+                    thread::spawn(move || {
+                        for i in (0..=5).rev() {
+                            let _ = cb_sink.send(Box::new(move |s: &mut Cursive| {
+                                s.call_on_name("timer", |view: &mut TextView| {
+                                    view.set_content(format!("Closing conv in {}", i));
+                                });
 
+                                if i == 0 {
+                                    s.quit();
+                                }
+                            }));
+                            thread::sleep(Duration::from_secs(1));
+                        }
+                    });
+                });
                 siv.run();
             } else {
                 let thread_listen = start_thread_listener(
