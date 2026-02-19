@@ -1,6 +1,7 @@
 use base64::{Engine as _, engine::general_purpose};
 use cursive::{
     CbSink, Cursive, CursiveExt, View, backend,
+    backends::crossterm::crossterm::cursor::MoveDown,
     event::{Event, Key},
     reexports::enumset::__internal::EnumSetTypeRepr,
     utils::lines::simple::Span,
@@ -20,7 +21,7 @@ use std::{
     io::{self, BufRead, BufReader, Read, Write},
     net::TcpListener,
     path::Display,
-    sync::{Arc, LazyLock, Mutex},
+    sync::{Arc, LazyLock, Mutex, mpsc},
     thread::{self, JoinHandle},
     time::{Duration, Instant},
 };
@@ -568,19 +569,35 @@ fn main() {
                                 s.pop_layer();
                             }),
                     );
-                    let cb_sink = s.cb_sink().clone();
+                    let cb_sink = Arc::new(s.cb_sink().clone());
                     thread::spawn(move || {
-                        for i in (0..=5).rev() {
+                        for i in (0..=50).rev() {
+                            let (tx, rx) = mpsc::channel();
                             let _ = cb_sink.send(Box::new(move |s: &mut Cursive| {
-                                s.call_on_name("timer", |view: &mut TextView| {
-                                    view.set_content(format!("Closing conv in {}", i));
-                                });
+                                let exists = match s.find_name::<TextView>("timer") {
+                                    None => false,
+                                    Some(mut timer) => {
+                                        timer.set_content(format!(
+                                            "Closing in {},{}",
+                                            i / 10 % 10,
+                                            i % 10
+                                        ));
+                                        true
+                                    }
+                                };
+                                let _ = tx.send(exists);
 
                                 if i == 0 {
                                     s.quit();
                                 }
                             }));
-                            thread::sleep(Duration::from_secs(1));
+
+                            match rx.recv() {
+                                Ok(true) => (),
+                                _ => break,
+                            }
+
+                            thread::sleep(Duration::from_millis(100));
                         }
                     });
                 });
