@@ -214,9 +214,9 @@ fn main() {
 
                         s.set_user_data(ReadedData {
                             addr_to: addr_to.clone().unwrap(),
-                            addr_us: addr_us.clone().unwrap(),
+                            addr_us: addr_us.clone().unwrap().trim().to_string(),
                         });
-                        match TcpListener::bind(addr_us.clone().unwrap()) {
+                        match TcpListener::bind(addr_us.clone().unwrap().trim()) {
                             Ok(_) => {
                                 s.quit();
                             }
@@ -278,10 +278,9 @@ fn main() {
                             })
                     );
 
-                })))
+                    })).child(Button::new("Play test sound",|_|{play_random_sound();})).child(Button::new("Generate encryption keys", |s|{s.add_layer(Dialog::new().title("Warning").content(TextView::new("this thing is gonna delete and generate the keys.\nThe conversators will receive a warning like you texting from another pc and potentially can be other person.\nContinue?")).button("Cancel", |s|{s.pop_layer();}));})))
         );
         siv.add_layer(main);
-        play_random_sound();
         siv.run();
         let user_data = siv.take_user_data::<ReadedData>().unwrap();
         println!("{} aboba {}", user_data.addr_to, user_data.addr_us);
