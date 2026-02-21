@@ -21,6 +21,7 @@ use std::{
     io::{self, BufRead, BufReader, Read, Write},
     net::TcpListener,
     path::Display,
+    process::Command,
     sync::{Arc, LazyLock, Mutex, mpsc},
     thread::{self, JoinHandle},
     time::{Duration, Instant},
@@ -61,7 +62,7 @@ fn main() {
     let mut saved_config: Config = toml::from_str(content.as_str()).unwrap();
 
     let mut private = "".to_string();
-    match fs::read_to_string("rsa_key") {
+    match fs::read_to_string("keys/rsa_key") {
         Ok(text) => private = text.to_string(),
         Err(_) => {
             println!("There is no RSA private key in running dir.")
@@ -70,7 +71,7 @@ fn main() {
 
     let mut public = "".to_string();
     static CONNECTED: LazyLock<Mutex<String>> = LazyLock::new(|| Mutex::new(String::new()));
-    match fs::read_to_string("rsa_key_public.pem") {
+    match fs::read_to_string("keys/rsa_key_public.pem") {
         Ok(text) => public = text,
         Err(_) => {
             println!("There is no RSA public key in running dir.")
@@ -278,7 +279,24 @@ fn main() {
                             })
                     );
 
-                    })).child(Button::new("Play test sound",|_|{play_random_sound();})).child(Button::new("Generate encryption keys", |s|{s.add_layer(Dialog::new().title("Warning").content(TextView::new("this thing is gonna delete and generate the keys.\nThe conversators will receive a warning like you texting from another pc and potentially can be other person.\nContinue?")).button("Cancel", |s|{s.pop_layer();}));})))
+                    })).child(Button::new("Play test sound",|_|{play_random_sound();}))
+                .child(Button::new("Generate encryption keys", |s|{s.add_layer(Dialog::new().title("Warning").content(TextView::new("this thing is gonna delete and generate the keys.\nThe conversators will receive a warning like you texting from another pc and potentially can be other person.\nContinue?"))
+                        .button("Cancel", |s|{s.pop_layer();}).button("Yes", |s|{
+                            for entry in fs::read_dir("keys").unwrap(){
+                                let _ = fs::remove_file(entry.unwrap().path());
+
+                            }
+                            let output = Command::new("bash")
+
+                                    .arg("-c")
+                                    .arg("cd keys && ssh-keygen -t rsa -b 4096 -m PKCS8 -f rsa_key -N \"\"&& ssh-keygen -f rsa_key.pub -e -m PKCS8 > rsa_key_public.pem"
+)
+                                    .output();
+
+                            s.pop_layer();
+                            s.add_layer(Dialog::new().title("Result").content(TextView::new(format!("{}",String::from_utf8(output.unwrap().stdout).unwrap()))).button("Okay", |s|{s.pop_layer();}));
+
+                    }));})))
         );
         siv.add_layer(main);
         siv.run();
