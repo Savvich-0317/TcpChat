@@ -24,7 +24,7 @@ use std::{
     process::Command,
     sync::{Arc, LazyLock, Mutex, mpsc},
     thread::{self, JoinHandle},
-    time::{Duration, Instant},
+    time::{self, Duration, Instant},
 };
 
 use rsa::{
@@ -282,19 +282,23 @@ fn main() {
                     })).child(Button::new("Play test sound",|_|{play_random_sound();}))
                 .child(Button::new("Generate encryption keys", |s|{s.add_layer(Dialog::new().title("Warning").content(TextView::new("this thing is gonna delete and generate the keys.\nThe conversators will receive a warning like you texting from another pc and potentially can be other person.\nContinue?"))
                         .button("Cancel", |s|{s.pop_layer();}).button("Yes", |s|{
-                            for entry in fs::read_dir("keys").unwrap(){
-                                let _ = fs::remove_file(entry.unwrap().path());
-
-                            }
-                            let output = Command::new("bash")
-
-                                    .arg("-c")
-                                    .arg("cd keys && ssh-keygen -t rsa -b 4096 -m PKCS8 -f rsa_key -N \"\"&& ssh-keygen -f rsa_key.pub -e -m PKCS8 > rsa_key_public.pem"
-)
-                                    .output();
-
                             s.pop_layer();
-                            s.add_layer(Dialog::new().title("Result").content(TextView::new(format!("{}",String::from_utf8(output.unwrap().stdout).unwrap()))).button("Okay", |s|{s.pop_layer();}));
+                            s.add_layer(Dialog::new().title("Setting size").content(TextView::new("Choose size for keys\nI recommend to use 4096 but if you have bad pc go with 2048")).button("2048", move |s|{s.pop_layer();
+                                s.add_layer(Dialog::new().title("result").content(TextView::new(regenerate_keys(2048))).button("Okay", |s|{s.pop_layer();}))
+
+
+                            }).button("4096", move |s|{s.pop_layer();
+                                    ;
+                                    s.add_layer(Dialog::new().title("result").content(TextView::new(regenerate_keys(4096))).button("Okay", |s|{s.pop_layer();}));}));
+
+
+
+
+
+
+
+
+
 
                     }));})))
         );
@@ -666,7 +670,22 @@ fn decrypt_message(message: String, private_us: String) -> String {
         String::from_utf8(decrypted).unwrap()
     }
 }
+fn regenerate_keys(size: u32) -> String {
+    for entry in fs::read_dir("keys").unwrap() {
+        let _ = fs::remove_file(entry.unwrap().path());
+    }
+    let output = Command::new("bash")
 
+            .arg("-c")
+            .arg(format!("cd keys && ssh-keygen -t rsa -b {size} -m PKCS8 -f rsa_key -N \"\"&& ssh-keygen -f rsa_key.pub -e -m PKCS8 > rsa_key_public.pem")
+)
+            .output().unwrap();
+    format!(
+        "{}\n{}",
+        String::from_utf8(output.stderr).unwrap(),
+        String::from_utf8(output.stdout).unwrap()
+    )
+}
 fn send_handshake(addr_to: String, addr_us: String, public_key: String) -> Result<(), String> {
     let mut sender = TcpSender::new(addr_to.to_string(), 60);
     let handshake = format!("!Handshake!ip:{}public:{:?}", addr_us, public_key.trim()).to_string();
