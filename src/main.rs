@@ -280,7 +280,7 @@ fn main() {
                     );
 
                     })).child(Button::new("Play test sound",|_|{play_random_sound();}))
-                .child(Button::new("Generate encryption keys", |s|{s.add_layer(Dialog::new().title("Warning").content(TextView::new("this thing is gonna delete and generate the keys.\nThe conversators will receive a warning like you texting from another pc and potentially can be other person.\nContinue?"))
+                .child(Button::new("(Re)generate encryption keys", |s|{s.add_layer(Dialog::new().title("Warning").content(TextView::new("this thing is gonna delete and generate the keys.\nThe conversators will receive a warning like you texting from another pc and potentially can be other person.\nContinue?"))
                         .button("Cancel", |s|{s.pop_layer();}).button("Yes", |s|{
                             s.pop_layer();
                             s.add_layer(Dialog::new().title("Setting size").content(TextView::new("Choose size for keys\nI recommend to use 4096 but if you have bad pc go with 2048")).button("2048", move |s|{s.pop_layer();
@@ -312,13 +312,30 @@ fn main() {
         siv.quit();
     } else {
         println!(
-            "choose operation mode 2-sender 1-listener 3 - client + server 4 - choose long term adress and port 5 delete conversation history"
+            "choose operation mode 2-sender 1-listener 3 - client + server 4 - choose long term adress and port 5 delete conversation history 6 (Re)generate encryption keys"
         );
         choose = "".to_string();
         io::stdin().read_line(&mut choose).unwrap();
     }
 
     match choose.trim() {
+        "6" => {
+            print!(
+                "Are you sure? It will delete all previous keys and probably will mark you as you were another person or from other computer y/n "
+            );
+            io::stdout().flush().unwrap();
+            let mut choose = "".to_string();
+            io::stdin().read_line(&mut choose).unwrap();
+            if choose.trim().to_ascii_lowercase() == "y" {
+                print!(
+                    "Choose keys size, i recommend 4096, but if you got any problem use 2048\n size:"
+                );
+                io::stdout().flush().unwrap();
+                let mut choose = "".to_string();
+                io::stdin().read_line(&mut choose).unwrap();
+                regenerate_keys(choose.trim().parse().unwrap());
+            }
+        }
         "5" => {
             println!("Sure? y/n");
             let mut choose = "".to_string();
