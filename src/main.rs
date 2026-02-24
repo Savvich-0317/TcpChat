@@ -328,10 +328,13 @@ fn main() {
             io::stdin().read_line(&mut choose).unwrap();
             if choose.trim().to_ascii_lowercase() == "y" {
                 print!(
-                    "Choose keys size, i recommend 4096, but if you got any problem use 2048\n size:"
+                    "Choose keys size, i recommend 4096 (default), but if you got any problem use 2048\n size:"
                 );
                 io::stdout().flush().unwrap();
                 let mut choose = "".to_string();
+                if choose.is_empty(){
+                    choose = "4096".to_string();
+                }
                 io::stdin().read_line(&mut choose).unwrap();
                 regenerate_keys(choose.trim().parse().unwrap());
             }
@@ -650,7 +653,13 @@ fn main() {
                 );
                 let thread_sender =
                     start_thread_sender(addr_to.to_string(), public_conv.to_string());
-                println!("time spended for connect idk lol sec");
+                println!(
+                    "from {} to {} conversation. Encryption: our: {} their: {} ping todo",
+                    addr_us,
+                    addr_to,
+                    !public.is_empty(),
+                    !public_conv.is_empty()
+                );
 
                 thread_sender.join().unwrap();
             }
