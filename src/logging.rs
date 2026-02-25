@@ -1,12 +1,36 @@
 use std::{
-    io::{BufRead, BufReader, Read, Write},
+    io::{self, BufRead, BufReader, Read, Write},
     net::TcpStream,
 };
 
-use chrono::{Local, Timelike};
+use chrono::{Local, Timelike, Utc};
 
 use crate::decrypt_message;
 
+pub fn timestamp(addr_to: String) {
+    let mut chat_log = match std::fs::exists(format!("history/{addr_to}.txt")) {
+        Ok(true) => {
+            let mut buffer = "".to_string();
+            std::fs::File::open(format!("history/{addr_to}.txt"))
+                .unwrap()
+                .read_to_string(&mut buffer)
+                .unwrap();
+            let mut chat_log = std::fs::File::create(format!("history/{addr_to}.txt"))
+                .expect("failed to create a file");
+            chat_log.write_all(buffer.as_bytes()).unwrap();
+            chat_log
+        }
+
+        _ => {
+            let mut chat_log = std::fs::File::create(format!("history/{addr_to}.txt"))
+                .expect("failed to create a file");
+            chat_log
+        }
+    };
+    chat_log
+        .write_all(format!("\n<new conversation on {}>\n\n", Utc::now().to_rfc3339()).as_bytes())
+        .unwrap();
+}
 pub trait SaveStream {
     fn save_stream(&self, addr_to: &str, private_us: &str);
 }
@@ -47,6 +71,7 @@ impl PrintMessage for String {
         }
     }
 }
+
 pub fn print_log(addr_to: &str) -> Result<(), &str> {
     match std::fs::exists(format!("history/{addr_to}.txt")) {
         Ok(true) => {

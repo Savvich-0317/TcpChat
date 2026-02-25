@@ -36,7 +36,7 @@ use sha2::Sha256;
 
 use crate::{
     listen::{GetHandshake, PrintStream},
-    logging::{LogMessage, PrintMessage, print_log},
+    logging::{LogMessage, PrintMessage, print_log, timestamp},
     sender::TcpSender,
 };
 
@@ -332,7 +332,7 @@ fn main() {
                 );
                 io::stdout().flush().unwrap();
                 let mut choose = "".to_string();
-                if choose.is_empty(){
+                if choose.is_empty() {
                     choose = "4096".to_string();
                 }
                 io::stdin().read_line(&mut choose).unwrap();
@@ -511,10 +511,12 @@ fn main() {
                 public_conv
             );
             CONNECTED.lock().unwrap().clear();
-            unsafe {
-                CONNECTED.lock().unwrap().push_str("connected");
-                while CONNECTED.lock().unwrap().as_str() != "finished" {
-                    thread::sleep(Duration::from_secs(1));
+            if saved_config.tui_interface {
+                unsafe {
+                    CONNECTED.lock().unwrap().push_str("connected");
+                    while CONNECTED.lock().unwrap().as_str() != "finished" {
+                        thread::sleep(Duration::from_secs(1));
+                    }
                 }
             }
 
@@ -524,7 +526,7 @@ fn main() {
                 let mut siv = Cursive::default();
 
                 let mut conv = LinearLayout::vertical();
-
+                timestamp(addr_to.to_string());
                 let thread_listen = start_thread_listener(
                     addr_us.clone(),
                     private.clone(),
@@ -644,6 +646,7 @@ fn main() {
                 });
                 siv.run();
             } else {
+                timestamp(addr_to.to_string());
                 let thread_listen = start_thread_listener(
                     addr_us.clone(),
                     private.clone(),
