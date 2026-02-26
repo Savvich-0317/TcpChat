@@ -36,7 +36,7 @@ use sha2::Sha256;
 
 use crate::{
     listen::{GetHandshake, PrintStream},
-    logging::{LogMessage, PrintMessage, print_log, timestamp},
+    logging::{LogMessage, PrintMessage, keystamp, print_log, timestamp},
     sender::TcpSender,
 };
 
@@ -519,14 +519,16 @@ fn main() {
                     }
                 }
             }
+            keystamp(addr_to.to_string(), public_conv.to_string());
 
+            timestamp(addr_to.to_string());
             println!("to {addr_to} us {addr_us}");
 
             if saved_config.tui_interface {
                 let mut siv = Cursive::default();
 
                 let mut conv = LinearLayout::vertical();
-                timestamp(addr_to.to_string());
+
                 let thread_listen = start_thread_listener(
                     addr_us.clone(),
                     private.clone(),

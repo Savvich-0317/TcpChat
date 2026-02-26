@@ -1,4 +1,5 @@
 use std::{
+    fs::{self, File},
     io::{self, BufRead, BufReader, Read, Write},
     net::TcpStream,
 };
@@ -7,6 +8,37 @@ use chrono::{Local, Timelike, Utc};
 
 use crate::decrypt_message;
 
+pub fn keystamp(addr_to: String, public: String) {
+    let mut chat_log = match std::fs::exists(format!("history/{addr_to}.txt")) {
+        Ok(true) => {
+            let mut buffer = "".to_string();
+            std::fs::File::open(format!("history/{addr_to}.txt"))
+                .unwrap()
+                .read_to_string(&mut buffer)
+                .unwrap();
+            let mut chat_log = std::fs::File::create(format!("history/{addr_to}.txt"))
+                .expect("failed to create a file");
+            chat_log.write_all(buffer.as_bytes()).unwrap();
+            chat_log
+        }
+
+        _ => {
+            let mut chat_log = std::fs::File::create(format!("history/{addr_to}.txt"))
+                .expect("failed to create a file");
+            chat_log
+        }
+    };
+    let public = public[0..100].to_string();
+    let content = fs::read_to_string(format!("history/{addr_to}.txt"))
+        .expect(format!("history/{addr_to}.txt").as_str());
+    if !content.starts_with("key") {
+        fs::write(
+            format!("history/{addr_to}.txt"),
+            format!("key for remember purposes: {}\n{}", public, content).as_bytes(),
+        )
+        .unwrap();
+    }
+}
 pub fn timestamp(addr_to: String) {
     let mut chat_log = match std::fs::exists(format!("history/{addr_to}.txt")) {
         Ok(true) => {
