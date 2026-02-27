@@ -7,7 +7,18 @@ use std::{
 use chrono::{Local, Timelike, Utc};
 
 use crate::decrypt_message;
-
+pub fn is_familliar_key(addr_to: String, public: String) -> bool {
+    let public = public[0..100].to_string();
+    if fs::read_to_string(format!("history/{addr_to}.txt")).is_err()
+        || !fs::read_to_string(format!("history/{addr_to}.txt"))
+            .unwrap()
+            .starts_with(format!("key for remember purposes: {}", public).as_str())
+    {
+        false
+    } else {
+        true
+    }
+}
 pub fn keystamp(addr_to: String, public: String) {
     let mut chat_log = match std::fs::exists(format!("history/{addr_to}.txt")) {
         Ok(true) => {

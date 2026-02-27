@@ -36,7 +36,7 @@ use sha2::Sha256;
 
 use crate::{
     listen::{GetHandshake, PrintStream},
-    logging::{LogMessage, PrintMessage, keystamp, print_log, timestamp},
+    logging::{LogMessage, PrintMessage, is_familliar_key, keystamp, print_log, timestamp},
     sender::TcpSender,
 };
 
@@ -519,6 +519,7 @@ fn main() {
                     }
                 }
             }
+            let safe = is_familliar_key(addr_to.to_string(), public_conv.to_string());
             keystamp(addr_to.to_string(), public_conv.to_string());
 
             timestamp(addr_to.to_string());
@@ -665,6 +666,9 @@ fn main() {
                     !public.is_empty(),
                     !public_conv.is_empty()
                 );
+                if !safe {
+                    println!("Warning suspcious connection");
+                }
 
                 thread_sender.join().unwrap();
             }
