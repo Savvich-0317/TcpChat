@@ -8,12 +8,17 @@ use chrono::{Local, Timelike, Utc};
 
 use crate::decrypt_message;
 pub fn is_familliar_key(addr_to: String, public: String) -> bool {
-    let public = public[0..100].to_string();
+    let public = public[0..90].to_string();
     if fs::read_to_string(format!("history/{addr_to}.txt")).is_err()
         || !fs::read_to_string(format!("history/{addr_to}.txt"))
             .unwrap()
-            .starts_with(format!("key for remember purposes: {}", public).as_str())
+            .starts_with(format!("key for remember purposes: {}end", public).as_str())
     {
+        println!(
+            "!!!!!!!!!!!!!! {}  {} !!!!!!!!!!!!!!!!!",
+            public,
+            fs::read_to_string(format!("history/{addr_to}.txt")).unwrap()
+        );
         false
     } else {
         true
@@ -39,15 +44,25 @@ pub fn keystamp(addr_to: String, public: String) {
             chat_log
         }
     };
-    let public = public[0..100].to_string();
+    let public = public[0..90].to_string();
     let content = fs::read_to_string(format!("history/{addr_to}.txt"))
         .expect(format!("history/{addr_to}.txt").as_str());
     if !content.starts_with("key") {
         fs::write(
             format!("history/{addr_to}.txt"),
-            format!("key for remember purposes: {}\n{}", public, content).as_bytes(),
+            format!("key for remember purposes: {}end\n{}", public, content).as_bytes(),
         )
         .unwrap();
+    } else {
+        if let Some(pos) = content.find("end") {
+            let rest_of_content = &content[pos..];
+            let new_data = format!(
+                "key for remember purposes: {}\n{}",
+                public,
+                rest_of_content.trim_start()
+            );
+            fs::write(format!("history/{addr_to}.txt"), new_data).unwrap();
+        }
     }
 }
 pub fn timestamp(addr_to: String) {

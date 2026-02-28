@@ -1,6 +1,6 @@
 key for remember purposes: -----BEGIN PUBLIC KEY-----
-MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAvY6Pxp+KaMX4pLNAv5UY
-v9eR3XX+
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxug1O9y+eInd+GXEJlD
+end
 asdf // 0:48/decrypted / from convensator
 asdf // 0:48/decrypted / from convensator
 asdf // 23:27/decrypted / from convensator
@@ -118,4 +118,62 @@ easdafeas // 23:28/decrypted / from convensator
 
 
 <new conversation on 2026-02-27T20:51:49.637149742+00:00>
+
+
+<new conversation on 2026-02-28T20:14:43.345430570+00:00>
+
+
+<new conversation on 2026-02-28T20:17:02.016499679+00:00>
+
+
+<new conversation on 2026-02-28T20:24:17.553307968+00:00>
+
+
+<new conversation on 2026-02-28T20:24:17.560794183+00:00>
+
+casdf // 23:24/decrypted / from convensator
+
+<new conversation on 2026-02-28T20:28:32.816499628+00:00>
+
+
+<new conversation on 2026-02-28T20:28:32.824097770+00:00>
+
+
+<new conversation on 2026-02-28T20:29:55.824835676+00:00>
+
+
+<new conversation on 2026-02-28T20:29:55.830082290+00:00>
+
+
+<new conversation on 2026-02-28T20:31:27.534429804+00:00>
+
+
+<new conversation on 2026-02-28T20:36:57.590089568+00:00>
+
+
+<new conversation on 2026-02-28T20:37:24.776626822+00:00>
+
+
+<new conversation on 2026-02-28T20:40:02.550718264+00:00>
+
+
+<new conversation on 2026-02-28T20:40:29.319178874+00:00>
+
+
+<new conversation on 2026-02-28T20:40:52.826115748+00:00>
+
+
+<new conversation on 2026-02-28T20:41:07.112516912+00:00>
+
+
+<new conversation on 2026-02-28T20:41:35.119464053+00:00>
+
+
+<new conversation on 2026-02-28T20:41:48.880688647+00:00>
+
+
+<new conversation on 2026-02-28T20:42:13.995069969+00:00>
+
+
+<new conversation on 2026-02-28T20:42:44.566568277+00:00>
 

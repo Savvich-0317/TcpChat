@@ -503,9 +503,9 @@ fn main() {
 
             println!("{handshake}");
             let begin_public = handshake.find("public:").unwrap();
-            let addr_to = &handshake.as_str()[14..begin_public];
+            let addr_to = handshake.as_str()[14..begin_public].to_string();
             let public_conv =
-                &handshake.as_str()[begin_public + 8..&handshake.len() - 1].replace("\\n", "\n");
+                handshake.as_str()[begin_public + 8..&handshake.len() - 1].replace("\\n", "\n");
             println!(
                 "gotted handshake! from {addr_to}\nand public {}",
                 public_conv
@@ -520,10 +520,10 @@ fn main() {
                 }
             }
             let safe = is_familliar_key(addr_to.to_string(), public_conv.to_string());
-            keystamp(addr_to.to_string(), public_conv.to_string());
-
-            timestamp(addr_to.to_string());
-            println!("to {addr_to} us {addr_us}");
+            let addr_to = Arc::new(addr_to);
+            let public_conv = Arc::new(public_conv);
+            timestamp(addr_to.clone().to_string());
+            println!("to {} us {addr_us}", addr_to.clone());
 
             if saved_config.tui_interface {
                 let mut siv = Cursive::default();
@@ -647,6 +647,27 @@ fn main() {
                         }
                     });
                 });
+                if !safe {
+                    siv.add_layer(
+                        Dialog::new()
+                            .title("Warning!")
+                            .content(TextView::new(
+                                "The user you are communicating with is using another key!\n
+                        Potentially it could be another person!",
+                            ))
+                            .button("Close connection", |s| {
+                                s.quit();
+                            })
+                            .button("Remember new key", {
+                                let addr_to = Arc::clone(&addr_to);
+                                let public_conv = Arc::clone(&public_conv);
+                                move |s| {
+                                    keystamp(addr_to.to_string(), public_conv.to_string());
+                                    s.pop_layer();
+                                }
+                            }),
+                    );
+                }
                 siv.run();
             } else {
                 timestamp(addr_to.to_string());
