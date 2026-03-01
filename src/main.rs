@@ -148,11 +148,11 @@ fn main() {
                                 }
                                 let data = ReadedData {
                                     addr_to: s.user_data::<ReadedData>().unwrap().addr_to.clone(),
-                                    addr_us: addr_us.clone().unwrap(),
+                                    addr_us: addr_us.clone().unwrap().trim().to_string(),
                                 };
                                 s.set_user_data(data);
 
-                                match TcpListener::bind(addr_us.clone().unwrap()) {
+                                match TcpListener::bind(addr_us.clone().unwrap().trim()) {
                                     Ok(_) => {
                                         s.quit();
                                     }
@@ -652,8 +652,7 @@ fn main() {
                         Dialog::new()
                             .title("Warning!")
                             .content(TextView::new(
-                                "The user you are communicating with is using another key!\n
-                        Potentially it could be another person!",
+                                "The user you are communicating with is using another key!\nPotentially it could be another person!"
                             ))
                             .button("Close connection", |s| {
                                 s.quit();
@@ -687,10 +686,24 @@ fn main() {
                     !public.is_empty(),
                     !public_conv.is_empty()
                 );
-                if !safe {
-                    println!("Warning suspcious connection");
-                }
 
+                if !safe {
+                    println!(
+                        "Warning!\n
+                        The user you are communicating with is using another key!\n
+                        Potentially it could be another person!\n
+                        y - remember key\n
+                        n - drop connection\n
+                        choose: "
+                    );
+                    let mut choose = String::new();
+                    io::stdin().read_to_string(&mut choose).unwrap();
+                    if choose == "y" {
+                        keystamp(addr_to.clone().to_string(), public_conv.clone().to_string());
+                    } else {
+                        return;
+                    }
+                }
                 thread_sender.join().unwrap();
             }
         }
