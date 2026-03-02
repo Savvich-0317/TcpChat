@@ -36,7 +36,9 @@ use sha2::Sha256;
 
 use crate::{
     listen::{GetHandshake, PrintStream},
-    logging::{LogMessage, PrintMessage, is_familliar_key, keystamp, print_log, timestamp},
+    logging::{
+        LogMessage, PrintMessage, get_key, is_familliar_key, keystamp, print_log, timestamp,
+    },
     sender::TcpSender,
 };
 
@@ -651,9 +653,17 @@ fn main() {
                     siv.add_layer(
                         Dialog::new()
                             .title("Warning!")
-                            .content(TextView::new(
-                                "The user you are communicating with is using another key!\nPotentially it could be another person!"
-                            ))
+                            .content(TextView::new(format!(
+                                "
+The user you are communicating with is using another key!
+Potentially it could be another person!
+
+Previous: {}...
+
+Now: {}...",
+                                public_conv[..90].to_string(),
+                                get_key(addr_to.clone().to_string())
+                            )))
                             .button("Close connection", |s| {
                                 s.quit();
                             })
