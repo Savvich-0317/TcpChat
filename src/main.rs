@@ -4,7 +4,7 @@ use cursive::{
     backends::crossterm::crossterm::cursor::MoveDown,
     event::{Event, Key},
     reexports::enumset::__internal::EnumSetTypeRepr,
-    utils::lines::simple::Span,
+    utils::{lines::simple::Span, markup::StyledString},
     view::{self, Nameable, Resizable, Scrollable, Selector},
     views::{
         Button, Dialog, DummyView, Layer, LinearLayout, OnEventView, ScrollView, StackView,
@@ -22,7 +22,7 @@ use std::{
     net::TcpListener,
     path::Display,
     process::Command,
-    sync::{Arc, LazyLock, Mutex, mpsc},
+    sync::{Arc, LazyLock, Mutex, atomic::AtomicBool, mpsc},
     thread::{self, JoinHandle},
     time::{self, Duration, Instant},
 };
@@ -49,6 +49,7 @@ mod sender;
 struct Config {
     addr_us: String,
     encryption: bool,
+    keys_auth: bool,
     save_history: bool,
     tui_interface: bool,
 }
@@ -305,6 +306,43 @@ fn main() {
                     }));})))
         );
         siv.add_layer(main);
+        siv.add_global_callback(Key::Esc, |s| {
+            s.add_layer(
+                Dialog::around(TextView::new("Closing conv in ").with_name("timer")).button(
+                    "Cancel",
+                    |s| {
+                        s.pop_layer();
+                    },
+                ),
+            );
+            let cb_sink = Arc::new(s.cb_sink().clone());
+            thread::spawn(move || {
+                for i in (0..=50).rev() {
+                    let (tx, rx) = mpsc::channel();
+                    let _ = cb_sink.send(Box::new(move |s: &mut Cursive| {
+                        let exists = match s.find_name::<TextView>("timer") {
+                            None => false,
+                            Some(mut timer) => {
+                                timer.set_content(format!("Closing in {},{}", i / 10 % 10, i % 10));
+                                true
+                            }
+                        };
+                        let _ = tx.send(exists);
+
+                        if i == 0 {
+                            s.quit();
+                        }
+                    }));
+
+                    match rx.recv() {
+                        Ok(true) => (),
+                        _ => break,
+                    }
+                    
+                    thread::sleep(Duration::from_millis(100));
+                }
+            });
+        });
         siv.run();
         let user_data = siv.take_user_data::<ReadedData>().unwrap();
         println!("{} aboba {}", user_data.addr_to, user_data.addr_us);
@@ -521,7 +559,10 @@ fn main() {
                     }
                 }
             }
-            let safe = is_familliar_key(addr_to.to_string(), public_conv.to_string());
+            let mut safe = is_familliar_key(addr_to.to_string(), public_conv.to_string());
+            if !saved_config.keys_auth {
+                safe = true;
+            }
             let addr_to = Arc::new(addr_to);
             let public_conv = Arc::new(public_conv);
             timestamp(addr_to.clone().to_string());

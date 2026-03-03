@@ -1,4 +1,5 @@
 addr_us = "localhost:2424"
 encryption = true
+keys_auth = true
 save_history = true
 tui_interface = true
