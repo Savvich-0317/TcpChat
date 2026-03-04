@@ -37,7 +37,8 @@ use sha2::Sha256;
 use crate::{
     listen::{GetHandshake, PrintStream},
     logging::{
-        LogMessage, PrintMessage, get_key, is_familliar_key, keystamp, print_log, timestamp,
+        LogMessage, PrintMessage, get_key, is_familliar_key, keystamp, last_com, print_log,
+        timestamp,
     },
     sender::TcpSender,
 };
@@ -134,10 +135,12 @@ fn main() {
                     }else {
                         layout.add_child(TextView::new(format!("Adress us? Leave empty for {}",saved)));
                     }
-
+                    let addr_to = file_name.clone()[..file_name.len() - 4].to_string();
                     layout.add_child(TextArea::new().with_name("adress_us_e"));
                     let value = saved.clone();
                     s.add_layer(
+
+                        LinearLayout::vertical().child(TextView::new(format!("Last communication with {} is on: {}",addr_to,last_com(addr_to.clone())))).child(
                         LinearLayout::horizontal().child(
                         Dialog::new()
                             .title("Are you sure?")
@@ -178,7 +181,8 @@ fn main() {
                             })
                             .button("Cancel", |s| {
                                 s.pop_layer();
-                            }),).child(Dialog::new().title(format!("From previous convs with {}",file_name.clone()[..file_name.len() - 4].to_string())).content(TextArea::new().disabled().content(fs::read_to_string(format!("history/{}",file_name.clone())).unwrap_or_default())).scrollable())
+                            }),).child(Dialog::new().title(format!("From previous convs with {}",file_name.clone()[..file_name.len() - 4].to_string())).content(TextArea::new().disabled().content(fs::read_to_string(format!("history/{}",file_name.clone())).unwrap_or_default())).scrollable()))
+
                     );
 
                 },
@@ -338,7 +342,7 @@ fn main() {
                         Ok(true) => (),
                         _ => break,
                     }
-                    
+
                     thread::sleep(Duration::from_millis(100));
                 }
             });

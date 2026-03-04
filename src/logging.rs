@@ -16,6 +16,20 @@ pub fn get_key(addr_to: String) -> String {
         "".to_string()
     }
 }
+pub fn last_com(addr_to: String) -> String {
+    let content = fs::read_to_string(format!("history/{}.txt", addr_to));
+    if content.is_err() {
+        "neverb".to_string()
+    } else {
+        let content = content.unwrap();
+        let last_com = content.rfind("\n<new conversation on ");
+        if last_com.is_none() {
+            "nevera".to_string()
+        } else {
+            content[last_com.unwrap() + 21..content.rfind(">\n").unwrap()].to_string()
+        }
+    }
+}
 pub fn is_familliar_key(addr_to: String, public: String) -> bool {
     let public = public[0..90].to_string();
     if fs::read_to_string(format!("history/{addr_to}.txt")).is_err()
