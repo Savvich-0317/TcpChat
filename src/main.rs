@@ -4,6 +4,7 @@ use cursive::{
     backends::crossterm::crossterm::cursor::MoveDown,
     event::{Event, Key},
     reexports::enumset::__internal::EnumSetTypeRepr,
+    theme::{BaseColor, ColorStyle},
     utils::{lines::simple::Span, markup::StyledString},
     view::{self, Nameable, Resizable, Scrollable, Selector},
     views::{
@@ -255,7 +256,10 @@ fn main() {
         main.add_child(
             Dialog::new()
                 .title("Menu")
-                .content(LinearLayout::vertical().child(Button::new("Delete history", |siv|{siv.add_layer(Dialog::new().title("Warning").content(TextView::new("This action will delete all history")).button("Ok", |siv|{
+                .content(LinearLayout::vertical().child(Button::new("Delete history", |siv|{siv.add_layer(Dialog::new().title(StyledString::styled(
+                            "Warning!",
+                            ColorStyle::new(BaseColor::White, BaseColor::Red)
+                        )).content(TextView::new("This action will delete all history")).button("Ok", |siv|{
                     for entry in fs::read_dir("history").unwrap() {
                         fs::remove_file(entry.unwrap().path()).unwrap();
                     }
@@ -278,7 +282,10 @@ fn main() {
                                     .to_string();
                                 match TcpListener::bind(&saved_config.addr_us) {
                                     Ok(_) => {siv.pop_layer();},
-                                    Err(_) => {siv.add_layer(Dialog::new().title("Warning").content(TextView::new(format!("The {} adress is cant be binded \nCheck the port availability",&saved_config.addr_us))).button("Okay", |siv|{siv.pop_layer();}));}
+                                    Err(_) => {siv.add_layer(Dialog::new().title(StyledString::styled(
+                                                "Warning!",
+                                                ColorStyle::new(BaseColor::White, BaseColor::Red)
+                                            )).content(TextView::new(format!("The {} adress is cant be binded \nCheck the port availability",&saved_config.addr_us))).button("Okay", |siv|{siv.pop_layer();}));}
                                 }
                                 let toml_content = toml::to_string(&saved_config).unwrap();
                                 fs::write("config.toml", toml_content.as_bytes()).unwrap();
@@ -287,7 +294,10 @@ fn main() {
                     );
 
                     })).child(Button::new("Play test sound",|_|{play_random_sound();}))
-                .child(Button::new("(Re)generate encryption keys", |s|{s.add_layer(Dialog::new().title("Warning").content(TextView::new("this thing is gonna delete and generate the keys.\nThe conversators will receive a warning like you texting from another pc and potentially can be other person.\nContinue?"))
+                .child(Button::new("(Re)generate encryption keys", |s|{s.add_layer(Dialog::new().title(StyledString::styled(
+                            "Warning!",
+                            ColorStyle::new(BaseColor::White, BaseColor::Red)
+                        )).content(TextView::new("this thing is gonna delete and generate the keys.\nThe conversators will receive a warning like you texting from another pc and potentially can be other person.\nContinue?"))
                         .button("Cancel", |s|{s.pop_layer();}).button("Yes", |s|{
                             s.pop_layer();
                             s.add_layer(Dialog::new().title("Setting size").content(TextView::new("Choose size for keys\nI recommend to use 4096 but if you have bad pc go with 2048")).button("2048", move |s|{s.pop_layer();
@@ -695,20 +705,31 @@ fn main() {
                     });
                 });
                 if !safe {
+                    let mut message = StyledString::new();
+                    message.append_plain(
+                        "The user you are communicating with is using another key!\n",
+                    );
+                    message.append_plain("Potentially it could be ");
+                    message.append_styled(
+                        "another person!\n\n",
+                        ColorStyle::new(BaseColor::White, BaseColor::Red),
+                    
+                    );
+                    message.append_styled(format!("Previous: {}...\n\n",public_conv[..90].to_string()), ColorStyle::new(BaseColor::White, BaseColor::Green));
+                    message.append_styled(format!("Now: {}...\n\n",get_key(addr_to.clone().to_string())), ColorStyle::new(BaseColor::White, BaseColor::Yellow));
                     siv.add_layer(
                         Dialog::new()
-                            .title("Warning!")
-                            .content(TextView::new(format!(
-                                "
-The user you are communicating with is using another key!
-Potentially it could be another person!
+                            .title(StyledString::styled(
+                                "Warning!",
+                                ColorStyle::new(BaseColor::White, BaseColor::Red),
+                            ))
+                            .content(TextView::new(
+                                message, /*public_conv[..90].to_string(),
+                                        get_key(addr_to.clone().to_string())
 
-Previous: {}...
 
-Now: {}...",
-                                public_conv[..90].to_string(),
-                                get_key(addr_to.clone().to_string())
-                            )))
+                                        */
+                            ))
                             .button("Close connection", |s| {
                                 s.quit();
                             })

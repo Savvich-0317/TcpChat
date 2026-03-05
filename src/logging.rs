@@ -8,9 +8,10 @@ use chrono::{Local, Timelike, Utc};
 
 use crate::decrypt_message;
 pub fn get_key(addr_to: String) -> String {
+    let start = "key for remember purposes: -----BEGIN PUBLIC KEY-----\n";
     let content = fs::read_to_string(format!("history/{addr_to}.txt")).unwrap();
-    if content.starts_with("key for remember purposes:") {
-        content[content.find("key for remember purposes:").unwrap()..content.find("end").unwrap()]
+    if content.starts_with(start) {
+        content[content.find(start).unwrap()+start.len()..content.find("end").unwrap()]
             .to_string()
     } else {
         "".to_string()
@@ -35,7 +36,7 @@ pub fn is_familliar_key(addr_to: String, public: String) -> bool {
     if fs::read_to_string(format!("history/{addr_to}.txt")).is_err()
         || !fs::read_to_string(format!("history/{addr_to}.txt"))
             .unwrap()
-            .starts_with(format!("key for remember purposes: {}end", public).as_str())
+            .starts_with(format!("key for remember purposes: {}\nend", public).as_str())
     {
         println!(
             "!!!!!!!!!!!!!! {}  {} !!!!!!!!!!!!!!!!!",
