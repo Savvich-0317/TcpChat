@@ -3,7 +3,10 @@ use cursive::{
     CbSink, Cursive, CursiveExt, View, backend,
     backends::crossterm::crossterm::cursor::MoveDown,
     event::{Event, Key},
-    reexports::enumset::__internal::EnumSetTypeRepr,
+    reexports::{
+        enumset::__internal::EnumSetTypeRepr,
+        time::{OffsetDateTime, format_description::well_known::Rfc3339},
+    },
     theme::{BaseColor, ColorStyle},
     utils::{lines::simple::Span, markup::StyledString},
     view::{self, Nameable, Resizable, Scrollable, Selector},
@@ -139,9 +142,12 @@ fn main() {
                     let addr_to = file_name.clone()[..file_name.len() - 4].to_string();
                     layout.add_child(TextArea::new().with_name("adress_us_e"));
                     let value = saved.clone();
-                    s.add_layer(
 
-                        LinearLayout::vertical().child(TextView::new(format!("Last communication with {} is on: {}",addr_to,last_com(addr_to.clone())))).child(
+                    let ago = (OffsetDateTime::now_utc() - OffsetDateTime::parse(&last_com(addr_to.clone()).as_str(), &Rfc3339).unwrap_or_else(|_|OffsetDateTime::now_utc())).whole_minutes();
+
+
+                    s.add_layer(
+                        LinearLayout::vertical().child(TextView::new(format!("Last communication with {} is on: {} ({} minutes ago )",addr_to,last_com(addr_to.clone()),ago )),).child(
                         LinearLayout::horizontal().child(
                         Dialog::new()
                             .title("Are you sure?")
@@ -713,10 +719,15 @@ fn main() {
                     message.append_styled(
                         "another person!\n\n",
                         ColorStyle::new(BaseColor::White, BaseColor::Red),
-                    
                     );
-                    message.append_styled(format!("Previous: {}...\n\n",public_conv[..90].to_string()), ColorStyle::new(BaseColor::White, BaseColor::Green));
-                    message.append_styled(format!("Now: {}...\n\n",get_key(addr_to.clone().to_string())), ColorStyle::new(BaseColor::White, BaseColor::Yellow));
+                    message.append_styled(
+                        format!("Previous: {}...\n\n", public_conv[..90].to_string()),
+                        ColorStyle::new(BaseColor::White, BaseColor::Green),
+                    );
+                    message.append_styled(
+                        format!("Now: {}...\n\n", get_key(addr_to.clone().to_string())),
+                        ColorStyle::new(BaseColor::White, BaseColor::Yellow),
+                    );
                     siv.add_layer(
                         Dialog::new()
                             .title(StyledString::styled(

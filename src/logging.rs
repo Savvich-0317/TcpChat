@@ -5,13 +5,14 @@ use std::{
 };
 
 use chrono::{Local, Timelike, Utc};
+use cursive::reexports::time::{OffsetDateTime, Time, format_description::well_known::Rfc3339};
 
 use crate::decrypt_message;
 pub fn get_key(addr_to: String) -> String {
     let start = "key for remember purposes: -----BEGIN PUBLIC KEY-----\n";
     let content = fs::read_to_string(format!("history/{addr_to}.txt")).unwrap();
     if content.starts_with(start) {
-        content[content.find(start).unwrap()+start.len()..content.find("end").unwrap()]
+        content[content.find(start).unwrap() + start.len()..content.find("end").unwrap()]
             .to_string()
     } else {
         "".to_string()
@@ -20,14 +21,14 @@ pub fn get_key(addr_to: String) -> String {
 pub fn last_com(addr_to: String) -> String {
     let content = fs::read_to_string(format!("history/{}.txt", addr_to));
     if content.is_err() {
-        "neverb".to_string()
+        "never".to_string()
     } else {
         let content = content.unwrap();
         let last_com = content.rfind("\n<new conversation on ");
         if last_com.is_none() {
-            "nevera".to_string()
+            "never".to_string()
         } else {
-            content[last_com.unwrap() + 21..content.rfind(">\n").unwrap()].to_string()
+            content[last_com.unwrap() + 22..content.rfind(">\n").unwrap()].to_string()
         }
     }
 }
@@ -110,7 +111,16 @@ pub fn timestamp(addr_to: String) {
         }
     };
     chat_log
-        .write_all(format!("\n<new conversation on {}>\n\n", Utc::now().to_rfc3339()).as_bytes())
+        .write_all(
+            format!(
+                "\n<new conversation on {}>\n\n",
+                OffsetDateTime::now_local()
+                    .unwrap()
+                    .format(&Rfc3339)
+                    .unwrap()
+            )
+            .as_bytes(),
+        )
         .unwrap();
 }
 pub trait SaveStream {
