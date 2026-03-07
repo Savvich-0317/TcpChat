@@ -364,10 +364,17 @@ fn main() {
             });
         });
         siv.run();
-        let user_data = siv.take_user_data::<ReadedData>().unwrap();
+        let user_data = siv.take_user_data::<ReadedData>();
+        if user_data.is_none() {
+            return;
+        }
+        let user_data = user_data.unwrap();
         println!("{} aboba {}", user_data.addr_to, user_data.addr_us);
         addr_to = user_data.addr_to.clone();
         addr_us = user_data.addr_us.clone();
+        if addr_us.is_empty() {
+            return;
+        }
 
         siv.quit();
     } else {
@@ -712,20 +719,29 @@ fn main() {
                 });
                 if !safe {
                     let mut message = StyledString::new();
-                    message.append_plain(
-                        "The user you are communicating with is using another key!\n",
-                    );
-                    message.append_plain("Potentially it could be ");
+                    let previous = get_key(addr_to.clone().to_string());
+                    let now = public_conv[..90].to_string();
+                    if previous.is_empty() {
+                        message.append_plain(
+                            "The user you are communicating with is new.\nIf this is unexpected - drop connection.\n\n",
+                        );
+                    } else {
+                        message.append_plain(
+                            "The user you are communicating with is using another key!\n",
+                        );
+                        message.append_plain("Potentially it could be ");
+                        message.append_styled(
+                            "another person!\n\n",
+                            ColorStyle::new(BaseColor::White, BaseColor::Red),
+                        );
+                    }
+
                     message.append_styled(
-                        "another person!\n\n",
-                        ColorStyle::new(BaseColor::White, BaseColor::Red),
-                    );
-                    message.append_styled(
-                        format!("Previous: {}...\n\n", public_conv[..90].to_string()),
+                        format!("Previous: {}...\n\n", previous),
                         ColorStyle::new(BaseColor::White, BaseColor::Green),
                     );
                     message.append_styled(
-                        format!("Now: {}...\n\n", get_key(addr_to.clone().to_string())),
+                        format!("Now: {}...\n\n", now),
                         ColorStyle::new(BaseColor::White, BaseColor::Yellow),
                     );
                     siv.add_layer(
@@ -751,6 +767,9 @@ fn main() {
                                     keystamp(addr_to.to_string(), public_conv.to_string());
                                     s.pop_layer();
                                 }
+                            })
+                            .button("Skip this time", |s| {
+                                s.pop_layer();
                             }),
                     );
                 }

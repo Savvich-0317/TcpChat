@@ -39,11 +39,7 @@ pub fn is_familliar_key(addr_to: String, public: String) -> bool {
             .unwrap()
             .starts_with(format!("key for remember purposes: {}\nend", public).as_str())
     {
-        println!(
-            "!!!!!!!!!!!!!! {}  {} !!!!!!!!!!!!!!!!!",
-            public,
-            fs::read_to_string(format!("history/{addr_to}.txt")).unwrap()
-        );
+        
         false
     } else {
         true
