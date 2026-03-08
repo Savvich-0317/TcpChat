@@ -15,6 +15,7 @@ use cursive::{
         TextArea, TextView,
     },
 };
+use easy_upnp::{PortMappingProtocol, UpnpConfig, add_ports};
 use gag::Gag;
 use rand::RngCore;
 use rodio::Decoder;
@@ -65,6 +66,26 @@ struct ReadedData {
 }
 fn main() {
     println!("TcpChat");
+/* 
+    let config = UpnpConfig {
+        address: None,
+        port: 2424,
+        protocol: PortMappingProtocol::TCP,
+        duration: 3600,
+        comment: "TcpChat".to_string(),
+    };
+
+    for result in add_ports([config]) {
+        if let Err(err) = result {
+            panic!("{}", err);
+        }
+    }
+
+    let listener = TcpListener::bind("0.0.0.0:1212").expect("lol");
+    println!("lisen");
+
+    loop {}
+    */
 
     let content = fs::read_to_string("config.toml").unwrap();
     let mut saved_config: Config = toml::from_str(content.as_str()).unwrap();
