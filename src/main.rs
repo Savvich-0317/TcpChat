@@ -37,7 +37,7 @@ use rsa::{
     pkcs8::{DecodePrivateKey, DecodePublicKey},
     rand_core::OsRng,
 };
-use sha2::Sha256;
+use sha2::{Sha256, digest::consts::U160};
 
 use crate::{
     listen::{GetHandshake, PrintStream},
@@ -66,26 +66,6 @@ struct ReadedData {
 }
 fn main() {
     println!("TcpChat");
-/* 
-    let config = UpnpConfig {
-        address: None,
-        port: 2424,
-        protocol: PortMappingProtocol::TCP,
-        duration: 3600,
-        comment: "TcpChat".to_string(),
-    };
-
-    for result in add_ports([config]) {
-        if let Err(err) = result {
-            panic!("{}", err);
-        }
-    }
-
-    let listener = TcpListener::bind("0.0.0.0:1212").expect("lol");
-    println!("lisen");
-
-    loop {}
-    */
 
     let content = fs::read_to_string("config.toml").unwrap();
     let mut saved_config: Config = toml::from_str(content.as_str()).unwrap();
@@ -308,11 +288,31 @@ fn main() {
                                     .unwrap()
                                     .to_string();
                                 match TcpListener::bind(&saved_config.addr_us) {
+
                                     Ok(_) => {siv.pop_layer();},
-                                    Err(_) => {siv.add_layer(Dialog::new().title(StyledString::styled(
+                                    Err(_) => {
+                                        let value_to_parse = saved_config.addr_us.clone();
+                                        
+                                        siv.add_layer(Dialog::new().title(StyledString::styled(
                                                 "Warning!",
                                                 ColorStyle::new(BaseColor::White, BaseColor::Red)
-                                            )).content(TextView::new(format!("The {} adress is cant be binded \nCheck the port availability",&saved_config.addr_us))).button("Okay", |siv|{siv.pop_layer();}));}
+                                            )).content(TextView::new(format!("The {} adress is cant be binded \nCheck the port availability",&saved_config.addr_us))).button("Okay", |siv|{siv.pop_layer();}).button("Try to open with upnp", move |siv| {
+                                                    if let Some((_, port_str)) = value_to_parse.split_once(':') {
+                                                        match port_str.parse::<u16>() {
+                                                            Ok(port_num) => {
+                                                                siv.pop_layer();
+                                                                open_upnp_local_port(port_num);
+                                                                
+
+                                                            },
+                                                            Err(_) => {
+                                                                siv.add_layer(Dialog::info("error"));
+                                                            }
+                                                        }
+                                                    } else {
+                                                        siv.add_layer(Dialog::info("error"));
+                                                    }
+                                                }));}
                                 }
                                 let toml_content = toml::to_string(&saved_config).unwrap();
                                 fs::write("config.toml", toml_content.as_bytes()).unwrap();
@@ -1007,7 +1007,22 @@ fn start_thread_listener(
     });
     thread_listen
 }
+fn open_upnp_local_port(port: u16) -> Result<String, String> {
+    let config = UpnpConfig {
+        address: None,
+        port: port,
+        protocol: PortMappingProtocol::TCP,
+        duration: 3600,
+        comment: "TcpChat".to_string(),
+    };
 
+    for result in add_ports([config]) {
+        if result.is_err() {
+            return Err("not good".to_string());
+        }
+    }
+    Ok("okay".to_string())
+}
 fn start_thread_sender(addr_to: String, public_to: String) -> JoinHandle<()> {
     let thread_sender = thread::spawn(move || {
         let mut sender = TcpSender::new(addr_to.trim().to_string(), 60); //drops stream if goes out of scope
