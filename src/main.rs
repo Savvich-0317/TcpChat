@@ -180,7 +180,16 @@ fn main() {
                                                 ))
                                                 .button("Okay.", |s| {
                                                     s.pop_layer();
-                                                }),
+                                                }).button("Try to open with upnp", move |siv| {
+                                                    let addr_us = addr_us.clone().unwrap();
+                                                        if addr_us.contains(":"){
+                                                            siv.pop_layer();
+                                                            match open_upnp_address(addr_us.as_str()) {
+                                                                Ok(_) => siv.add_layer(Dialog::new().content(TextView::new("Success!")).button("Okay", |siv|{siv.pop_layer();})),
+                                                                Err(_) => siv.add_layer(Dialog::new().content(TextView::new("Error!")).button("Okay", |siv|{siv.pop_layer();}))
+                                                            }
+                                                        }
+                                                    }),
                                         );
                                     }
                                 }
@@ -246,7 +255,16 @@ fn main() {
                                         ))
                                         .button("Okay.", |s| {
                                             s.pop_layer();
-                                        }),
+                                        }).button("Try to open with upnp", move |siv| {
+                                            let addr_us = addr_us.clone().unwrap();
+                                                if addr_us.contains(":"){
+                                                    siv.pop_layer();
+                                                    match open_upnp_address(addr_us.as_str()) {
+                                                        Ok(_) => siv.add_layer(Dialog::new().content(TextView::new("Success!")).button("Okay", |siv|{siv.pop_layer();})),
+                                                        Err(_) => siv.add_layer(Dialog::new().content(TextView::new("Error!")).button("Okay", |siv|{siv.pop_layer();}))
+                                                    }
+                                                }
+                                            }),
                                 );
                             }
                         }
@@ -292,25 +310,17 @@ fn main() {
                                     Ok(_) => {siv.pop_layer();},
                                     Err(_) => {
                                         let value_to_parse = saved_config.addr_us.clone();
-                                        
+
                                         siv.add_layer(Dialog::new().title(StyledString::styled(
                                                 "Warning!",
                                                 ColorStyle::new(BaseColor::White, BaseColor::Red)
                                             )).content(TextView::new(format!("The {} adress is cant be binded \nCheck the port availability",&saved_config.addr_us))).button("Okay", |siv|{siv.pop_layer();}).button("Try to open with upnp", move |siv| {
-                                                    if let Some((_, port_str)) = value_to_parse.split_once(':') {
-                                                        match port_str.parse::<u16>() {
-                                                            Ok(port_num) => {
-                                                                siv.pop_layer();
-                                                                open_upnp_local_port(port_num);
-                                                                
-
-                                                            },
-                                                            Err(_) => {
-                                                                siv.add_layer(Dialog::info("error"));
-                                                            }
+                                                    if value_to_parse.contains(":"){
+                                                        siv.pop_layer();
+                                                        match open_upnp_address(value_to_parse.as_str()) {
+                                                            Ok(_) => siv.add_layer(Dialog::new().content(TextView::new("Success!")).button("Okay", |siv|{siv.pop_layer();})),
+                                                            Err(_) => siv.add_layer(Dialog::new().content(TextView::new("Error!")).button("Okay", |siv|{siv.pop_layer();}))
                                                         }
-                                                    } else {
-                                                        siv.add_layer(Dialog::info("error"));
                                                     }
                                                 }));}
                                 }
@@ -1007,10 +1017,11 @@ fn start_thread_listener(
     });
     thread_listen
 }
-fn open_upnp_local_port(port: u16) -> Result<String, String> {
+fn open_upnp_address(addr_us: &str) -> Result<String, String> {
+    let (addr, port) = addr_us.split_once(":").unwrap();
     let config = UpnpConfig {
         address: None,
-        port: port,
+        port: port.parse::<u16>().unwrap(),
         protocol: PortMappingProtocol::TCP,
         duration: 3600,
         comment: "TcpChat".to_string(),

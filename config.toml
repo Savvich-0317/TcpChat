@@ -1,4 +1,4 @@
-addr_us = "asdwdasd"
+addr_us = "0.0.0.0:12223"
 encryption = true
 keys_auth = true
 save_history = true
