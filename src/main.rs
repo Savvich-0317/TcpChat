@@ -126,84 +126,81 @@ fn main() {
             let file_name = file.unwrap().file_name().into_string().unwrap();
             files += format!("{}\n", &file_name).as_str();
             let saved = Arc::clone(&saved_addr_us);
-            layout.add_child(Button::new(
-                file_name.clone()[..file_name.clone().len() - 4].to_string(),
-                move |s| {
+            layout.add_child(
+                Button::new(
+                    file_name.clone()[..file_name.clone().len() - 4].to_string(),
+                    move |s| {
+                        s.set_user_data(ReadedData {
+                            addr_to: file_name.clone()[..file_name.len() - 4].to_string(),
+                            addr_us: "".to_string(),
+                        });
+                        let mut layout = LinearLayout::vertical();
+                        if saved.is_empty() {
+                            layout.add_child(TextView::new("Adress us?"));
+                        } else {
+                            layout.add_child(TextView::new(format!(
+                                "Adress us? Leave empty for {}",
+                                saved
+                            )));
+                        }
+                        let addr_to = file_name.clone()[..file_name.len() - 4].to_string();
+                        layout.add_child(TextArea::new().with_name("adress_us"));
+                        let value = saved.clone();
 
-                    s.set_user_data(ReadedData {
-                        addr_to: file_name.clone()[..file_name.len() - 4].to_string(),
-                        addr_us: "".to_string(),
-                    });
-                    let mut layout = LinearLayout::vertical();
-                    if saved.is_empty(){
-                        layout.add_child(TextView::new("Adress us?"));
-                    }else {
-                        layout.add_child(TextView::new(format!("Adress us? Leave empty for {}",saved)));
-                    }
-                    let addr_to = file_name.clone()[..file_name.len() - 4].to_string();
-                    layout.add_child(TextArea::new().with_name("adress_us_e"));
-                    let value = saved.clone();
+                        let ago = (OffsetDateTime::now_utc()
+                            - OffsetDateTime::parse(&last_com(addr_to.clone()).as_str(), &Rfc3339)
+                                .unwrap_or_else(|_| OffsetDateTime::now_utc()))
+                        .whole_minutes();
 
-                    let ago = (OffsetDateTime::now_utc() - OffsetDateTime::parse(&last_com(addr_to.clone()).as_str(), &Rfc3339).unwrap_or_else(|_|OffsetDateTime::now_utc())).whole_minutes();
-
-
-                    s.add_layer(
-                        LinearLayout::vertical().child(TextView::new(format!("Last communication with {} is on: {} ({} minutes ago )",addr_to,last_com(addr_to.clone()),ago )),).child(
-                        LinearLayout::horizontal().child(
-                        Dialog::new()
-                            .title("Are you sure?")
-                            .content(layout)
-                            .button("Yes", move |s| {
-                                let mut addr_us = s.call_on_name("adress_us_e", |v: &mut TextArea| {
-                                    v.get_content().to_string()
-                                });
-                                if addr_us.clone().unwrap().is_empty(){
-                                    addr_us = Some(value.to_string());
-                                }
-                                let data = ReadedData {
-                                    addr_to: s.user_data::<ReadedData>().unwrap().addr_to.clone(),
-                                    addr_us: addr_us.clone().unwrap().trim().to_string(),
-                                };
-                                s.set_user_data(data);
-
-                                match TcpListener::bind(addr_us.clone().unwrap().trim()) {
-                                    Ok(_) => {
-                                        s.quit();
-                                    }
-                                    Err(_) => {
-                                        s.pop_layer();
-                                        s.add_layer(
+                        let saved = saved.clone();
+                        s.add_layer(
+                            LinearLayout::vertical()
+                                .child(TextView::new(format!(
+                                    "Last communication with {} is on: {} ({} minutes ago )",
+                                    addr_to,
+                                    last_com(addr_to.clone()),
+                                    ago
+                                )))
+                                .child(
+                                    LinearLayout::horizontal()
+                                        .child(
                                             Dialog::new()
-                                                .title("Error")
-                                                .content(TextView::new(format!("The {} adress is cant be binded \nCheck the port availability",addr_us.clone().unwrap())
-
-                                                ))
-                                                .button("Okay.", |s| {
+                                                .title("Are you sure?")
+                                                .content(layout)
+                                                .button("Yes", move |s| {
+                                                    tui_try_connect(
+                                                        s.cb_sink().clone(),
+                                                        value.clone().to_string(),
+                                                    );
+                                                })
+                                                .button("Cancel", |s| {
                                                     s.pop_layer();
-                                                }).button("Try to open with upnp", move |siv| {
-                                                    let addr_us = addr_us.clone().unwrap();
-                                                        if addr_us.contains(":"){
-                                                            siv.pop_layer();
-                                                            match open_upnp_address(addr_us.as_str()) {
-                                                                Ok(_) => siv.add_layer(Dialog::new().content(TextView::new("Success!")).button("Okay", |siv|{siv.pop_layer();})),
-                                                                Err(_) => siv.add_layer(Dialog::new().content(TextView::new("Error!")).button("Okay", |siv|{siv.pop_layer();}))
-                                                            }
-                                                        }
-                                                    }),
-                                        );
-                                    }
-                                }
-
-
-                            })
-                            .button("Cancel", |s| {
-                                s.pop_layer();
-                            }),).child(Dialog::new().title(format!("From previous convs with {}",file_name.clone()[..file_name.len() - 4].to_string())).content(TextArea::new().disabled().content(fs::read_to_string(format!("history/{}",file_name.clone())).unwrap_or_default())).scrollable()))
-
-                    );
-
-                },
-            ).with_name("adress_select"));
+                                                }),
+                                        )
+                                        .child(
+                                            Dialog::new()
+                                                .title(format!(
+                                                    "From previous convs with {}",
+                                                    file_name.clone()[..file_name.len() - 4]
+                                                        .to_string()
+                                                ))
+                                                .content(
+                                                    TextArea::new().disabled().content(
+                                                        fs::read_to_string(format!(
+                                                            "history/{}",
+                                                            file_name.clone()
+                                                        ))
+                                                        .unwrap_or_default(),
+                                                    ),
+                                                )
+                                                .scrollable(),
+                                        ),
+                                ),
+                        );
+                    },
+                )
+                .with_name("adress_select"),
+            );
         }
         let saved_addr_us = saved_addr_us.clone();
         layout.add_child(Button::new("New...", move |s| {
@@ -212,62 +209,24 @@ fn main() {
             let mut add_layout = LinearLayout::vertical();
             add_layout.add_child(TextView::new("Adress to?"));
             add_layout.add_child(captured_addr_to);
-            if saved_addr_us.is_empty(){
+            if saved_addr_us.is_empty() {
                 add_layout.add_child(TextView::new("Adress us?"));
-            }else {
-                add_layout.add_child(TextView::new(format!("Adress us? Leave empty for {}",saved_addr_us)));
+            } else {
+                add_layout.add_child(TextView::new(format!(
+                    "Adress us? Leave empty for {}",
+                    saved_addr_us
+                )));
             }
 
             add_layout.add_child(captured_addr_us);
-           let saved = saved_addr_us.clone();
+            let saved = saved_addr_us.clone();
 
             s.add_layer(
                 Dialog::new()
                     .content(add_layout)
                     .title("Start new conversation")
                     .button("Start", move |s| {
-                        let addr_to = s.call_on_name("adress_to", |v: &mut TextArea| {
-                            v.get_content().to_string()
-                        });
-                        let mut addr_us = s.call_on_name("adress_us", |v: &mut TextArea| {
-                            v.get_content().to_string()
-                        });
-
-                        if addr_us.to_owned().unwrap().trim().is_empty(){
-                            addr_us = Some(saved.to_string());
-                        }
-
-                        s.set_user_data(ReadedData {
-                            addr_to: addr_to.clone().unwrap(),
-                            addr_us: addr_us.clone().unwrap().trim().to_string(),
-                        });
-                        match TcpListener::bind(addr_us.clone().unwrap().trim()) {
-                            Ok(_) => {
-                                s.quit();
-                            }
-                            Err(_) => {
-                                s.pop_layer();
-                                s.add_layer(
-                                    Dialog::new()
-                                        .title("Error")
-                                        .content(TextView::new(format!("The {} adress is cant be binded \nCheck the port availability",addr_us.clone().unwrap())
-
-                                        ))
-                                        .button("Okay.", |s| {
-                                            s.pop_layer();
-                                        }).button("Try to open with upnp", move |siv| {
-                                            let addr_us = addr_us.clone().unwrap();
-                                                if addr_us.contains(":"){
-                                                    siv.pop_layer();
-                                                    match open_upnp_address(addr_us.as_str()) {
-                                                        Ok(_) => siv.add_layer(Dialog::new().content(TextView::new("Success!")).button("Okay", |siv|{siv.pop_layer();})),
-                                                        Err(_) => siv.add_layer(Dialog::new().content(TextView::new("Error!")).button("Okay", |siv|{siv.pop_layer();}))
-                                                    }
-                                                }
-                                            }),
-                                );
-                            }
-                        }
+                        tui_try_connect(s.cb_sink().clone(), saved.clone().to_string());
                     })
                     .button("Cancel", |s| {
                         s.pop_layer();
@@ -342,7 +301,6 @@ fn main() {
 
 
                             }).button("4096", move |s|{s.pop_layer();
-                                    ;
                                     s.add_layer(Dialog::new().title("result").content(TextView::new(regenerate_keys(4096))).button("Okay", |s|{s.pop_layer();}));}));
 
 
@@ -1017,6 +975,83 @@ fn start_thread_listener(
     });
     thread_listen
 }
+
+fn tui_try_connect(cb_sink: CbSink, saved_addr_us: String) {
+    cb_sink
+        .send(Box::new(move |s: &mut Cursive| {
+            let addr_to =
+                s.call_on_name("adress_to", |v: &mut TextArea| v.get_content().to_string());
+            let mut addr_us =
+                s.call_on_name("adress_us", |v: &mut TextArea| v.get_content().to_string());
+
+            if addr_to.is_none() {
+                let addr_to = s.user_data::<ReadedData>().unwrap().addr_to.clone();
+                if addr_us.to_owned().unwrap().trim().is_empty() {
+                    addr_us = Some(saved_addr_us.clone().to_string());
+                }
+
+                s.set_user_data(ReadedData {
+                    addr_to: addr_to.clone(),
+                    addr_us: addr_us.clone().unwrap().trim().to_string(),
+                });
+            } else {
+                if addr_us.to_owned().unwrap().trim().is_empty() {
+                    addr_us = Some(saved_addr_us.clone().to_string());
+                }
+
+                s.set_user_data(ReadedData {
+                    addr_to: addr_to.clone().unwrap(),
+                    addr_us: addr_us.clone().unwrap().trim().to_string(),
+                });
+            }
+            
+
+            match TcpListener::bind(addr_us.clone().unwrap().trim()) {
+                Ok(_) => {
+                    s.quit();
+                }
+                Err(_) => {
+                    s.pop_layer();
+                    s.add_layer(
+                        Dialog::new()
+                            .title("Error")
+                            .content(TextView::new(format!(
+                                "The {} adress is cant be binded \nCheck the port availability",
+                                addr_us.clone().unwrap()
+                            )))
+                            .button("Okay.", |s| {
+                                s.pop_layer();
+                            })
+                            .button("Try to open with upnp", move |siv| {
+                                let addr_us = addr_us.clone().unwrap();
+                                if addr_us.contains(":") {
+                                    siv.pop_layer();
+                                    match open_upnp_address(addr_us.as_str()) {
+                                        Ok(_) => siv.add_layer(
+                                            Dialog::new()
+                                                .content(TextView::new("Success!"))
+                                                .button("Okay", |siv| {
+                                                    siv.pop_layer();
+                                                }),
+                                        ),
+                                        Err(_) => siv.add_layer(
+                                            Dialog::new().content(TextView::new("Error!")).button(
+                                                "Okay",
+                                                |siv| {
+                                                    siv.pop_layer();
+                                                },
+                                            ),
+                                        ),
+                                    }
+                                }
+                            }),
+                    );
+                }
+            }
+        }))
+        .unwrap();
+}
+
 fn open_upnp_address(addr_us: &str) -> Result<String, String> {
     let (addr, port) = addr_us.split_once(":").unwrap();
     let config = UpnpConfig {
