@@ -276,10 +276,10 @@ fn main() {
                                             )).content(TextView::new(format!("The {} adress is cant be binded \nCheck the port availability",&saved_config.addr_us))).button("Okay", |siv|{siv.pop_layer();}).button("Try to open with upnp", move |siv| {
                                                     if value_to_parse.contains(":"){
                                                         siv.pop_layer();
-                                                        match open_upnp_address(value_to_parse.as_str()) {
-                                                            Ok(_) => siv.add_layer(Dialog::new().content(TextView::new("Success!")).button("Okay", |siv|{siv.pop_layer();})),
-                                                            Err(_) => siv.add_layer(Dialog::new().content(TextView::new("Error!")).button("Okay", |siv|{siv.pop_layer();}))
+                                                        if open_upnp_address(value_to_parse.as_str()).is_err(){
+                                                            siv.add_layer(Dialog::new().content(TextView::new("Something vent wrong. Check addres format.")).button("Okay", |siv|{siv.pop_layer();}));
                                                         }
+
                                                     }
                                                 }));}
                                 }
@@ -1004,14 +1004,13 @@ fn tui_try_connect(cb_sink: CbSink, saved_addr_us: String) {
                     addr_us: addr_us.clone().unwrap().trim().to_string(),
                 });
             }
-            
 
             match TcpListener::bind(addr_us.clone().unwrap().trim()) {
                 Ok(_) => {
                     s.quit();
                 }
                 Err(_) => {
-                    s.pop_layer();
+                    
                     s.add_layer(
                         Dialog::new()
                             .title("Error")
@@ -1027,13 +1026,24 @@ fn tui_try_connect(cb_sink: CbSink, saved_addr_us: String) {
                                 if addr_us.contains(":") {
                                     siv.pop_layer();
                                     match open_upnp_address(addr_us.as_str()) {
-                                        Ok(_) => siv.add_layer(
-                                            Dialog::new()
-                                                .content(TextView::new("Success!"))
-                                                .button("Okay", |siv| {
-                                                    siv.pop_layer();
-                                                }),
-                                        ),
+                                        Ok(_) => {
+                                            siv.add_layer(
+                                                Dialog::new()
+                                                    .content(TextView::new("Success!"))
+                                                    .button("Okay", |siv| {
+                                                        siv.pop_layer();
+                                                    })
+                                                    .button("Retry", {
+                                                        let addr_us = addr_us.clone();
+                                                        move |siv| {
+                                                            tui_try_connect(
+                                                                siv.cb_sink().clone(),
+                                                                addr_us.clone(),
+                                                            );
+                                                        }
+                                                    }),
+                                            );
+                                        }
                                         Err(_) => siv.add_layer(
                                             Dialog::new().content(TextView::new("Error!")).button(
                                                 "Okay",
@@ -1054,9 +1064,13 @@ fn tui_try_connect(cb_sink: CbSink, saved_addr_us: String) {
 
 fn open_upnp_address(addr_us: &str) -> Result<String, String> {
     let (addr, port) = addr_us.split_once(":").unwrap();
+    let port = match port.parse::<u16>() {
+        Ok(n) => n,
+        Err(_) => return Err("wrong format".to_string()),
+    };
     let config = UpnpConfig {
         address: None,
-        port: port.parse::<u16>().unwrap(),
+        port: port,
         protocol: PortMappingProtocol::TCP,
         duration: 3600,
         comment: "TcpChat".to_string(),
