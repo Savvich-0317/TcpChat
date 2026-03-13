@@ -5,7 +5,7 @@ use cursive::{
     event::{Event, Key},
     reexports::{
         enumset::__internal::EnumSetTypeRepr,
-        time::{OffsetDateTime, format_description::well_known::Rfc3339},
+        time::{OffsetDateTime, ext::NumericalDuration, format_description::well_known::Rfc3339},
     },
     theme::{BaseColor, ColorStyle},
     utils::{lines::simple::Span, markup::StyledString},
@@ -153,13 +153,24 @@ fn main() {
                         .whole_minutes();
 
                         let saved = saved.clone();
+                        let mut time = "".to_string();
+
+                        if ago > 180 {
+                            time = format!("( {} hours ago )", ago / 60);
+                        } else if ago == 0 {
+                            time = format!("( now )");
+                        } else if ago < 180 {
+                            time = format!("( {} minutes ago )", ago);
+                        } else if ago / 60 > 48 {
+                            time = format!("( {} days ago )", ago / 60 / 24);
+                        }
                         s.add_layer(
                             LinearLayout::vertical()
                                 .child(TextView::new(format!(
-                                    "Last communication with {} is on: {} ({} minutes ago )",
+                                    "Last communication with {} is on: {} {}",
                                     addr_to,
                                     last_com(addr_to.clone()),
-                                    ago
+                                    time
                                 )))
                                 .child(
                                     LinearLayout::horizontal()
@@ -1010,7 +1021,6 @@ fn tui_try_connect(cb_sink: CbSink, saved_addr_us: String) {
                     s.quit();
                 }
                 Err(_) => {
-                    
                     s.add_layer(
                         Dialog::new()
                             .title("Error")
@@ -1026,10 +1036,10 @@ fn tui_try_connect(cb_sink: CbSink, saved_addr_us: String) {
                                 if addr_us.contains(":") {
                                     siv.pop_layer();
                                     match open_upnp_address(addr_us.as_str()) {
-                                        Ok(_) => {
+                                        Ok(text) => {
                                             siv.add_layer(
                                                 Dialog::new()
-                                                    .content(TextView::new("Success!"))
+                                                    .content(TextView::new(text))
                                                     .button("Okay", |siv| {
                                                         siv.pop_layer();
                                                     })
@@ -1044,8 +1054,8 @@ fn tui_try_connect(cb_sink: CbSink, saved_addr_us: String) {
                                                     }),
                                             );
                                         }
-                                        Err(_) => siv.add_layer(
-                                            Dialog::new().content(TextView::new("Error!")).button(
+                                        Err(err) => siv.add_layer(
+                                            Dialog::new().content(TextView::new(err)).button(
                                                 "Okay",
                                                 |siv| {
                                                     siv.pop_layer();
@@ -1066,7 +1076,9 @@ fn open_upnp_address(addr_us: &str) -> Result<String, String> {
     let (addr, port) = addr_us.split_once(":").unwrap();
     let port = match port.parse::<u16>() {
         Ok(n) => n,
-        Err(_) => return Err("wrong format".to_string()),
+        Err(_) => {
+            return Err("Wrong format.\n Use addres like this: 255.255.255.255:3232".to_string());
+        }
     };
     let config = UpnpConfig {
         address: None,
@@ -1078,10 +1090,13 @@ fn open_upnp_address(addr_us: &str) -> Result<String, String> {
 
     for result in add_ports([config]) {
         if result.is_err() {
-            return Err("not good".to_string());
+            return Err("Something went wrong.\n
+                Maybe your router upnp is disabled - Open it."
+                .to_string());
         }
     }
-    Ok("okay".to_string())
+    Ok("Seems okay!\n\nNote: port is opened for 1 hour.\nAlso this message doesnt gurantee that \nit is actually open, router just answered with ok.\nIf you are under double nat it will also not work."
+        .to_string())
 }
 fn start_thread_sender(addr_to: String, public_to: String) -> JoinHandle<()> {
     let thread_sender = thread::spawn(move || {
