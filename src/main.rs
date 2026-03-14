@@ -323,7 +323,18 @@ fn main() {
 
 
 
-                    }));})))
+                    }));})).child(Button::new("open adress with upnp", |siv|{
+                        let layout = LinearLayout::vertical().child(TextView::new("Adress to open:")).child(TextArea::new().with_name("addr_us"));
+                        siv.add_layer(Dialog::new().title("upnp setup").content(layout).button("Open", |siv|{
+                            let addr_us = siv.call_on_name("addr_us", |view: &mut TextArea|{view.get_content().to_string()}).unwrap();
+                            siv.pop_layer();
+                            match open_upnp_address(addr_us.as_str()){
+                                Ok(ok) => siv.add_layer(Dialog::new().title("Success").content(TextView::new(ok)).button("Okay", |siv|{siv.pop_layer();})),
+                                Err(err) => siv.add_layer(Dialog::new().title("Error").content(TextView::new(err)).button("Okay", |siv|{siv.pop_layer();}))
+
+                            }
+                        }).button("Cancel", |siv| {siv.pop_layer();}));
+                    })))
         );
         siv.add_layer(main);
         siv.add_global_callback(Key::Esc, |s| {
