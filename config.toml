@@ -1,5 +1,5 @@
-addr_us = "0.0.0.0:12223"
+addr_us = "0.0.0.0:2424"
 encryption = true
 keys_auth = true
 save_history = true
-tui_interface = true
+tui_interface = false

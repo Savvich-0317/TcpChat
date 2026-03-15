@@ -65,190 +65,194 @@ struct ReadedData {
     addr_to: String,
 }
 fn main() {
-    println!("TcpChat");
+    loop {
+        println!("TcpChat");
 
-    let content = fs::read_to_string("config.toml").unwrap();
-    let mut saved_config: Config = toml::from_str(content.as_str()).unwrap();
+        let content = fs::read_to_string("config.toml").unwrap();
+        let mut saved_config: Config = toml::from_str(content.as_str()).unwrap();
 
-    let mut private = "".to_string();
-    match fs::read_to_string("keys/rsa_key") {
-        Ok(text) => private = text.to_string(),
-        Err(_) => {
-            println!("There is no RSA private key in running dir.")
-        }
-    }
-
-    let mut public = "".to_string();
-    static CONNECTED: LazyLock<Mutex<String>> = LazyLock::new(|| Mutex::new(String::new()));
-    match fs::read_to_string("keys/rsa_key_public.pem") {
-        Ok(text) => public = text,
-        Err(_) => {
-            println!("There is no RSA public key in running dir.")
-        }
-    }
-
-    if !public.is_empty() && !private.is_empty() {
-        println!("There is rsa keys!");
-    } else {
-        println!(
-            "There is no encryption keys! You can generate pair with generate_my_keys.sh in directory!"
-        );
-    }
-
-    if !saved_config.encryption {
-        private = "".to_string();
-        public = "".to_string();
-        println!("Encryption disabled via config.");
-    }
-    if !saved_config.save_history {
-        println!("History saving disabled via config.");
-    }
-    /*
-            let message = "lol aboba";
-            let encrypt = encrypt_message(message.to_string(), public.clone());
-            println!("{}", encrypt);
-            println!("{}", decrypt_message(encrypt, private.clone()));
-    */
-    let mut addr_us = "".to_string(); //localhost:2121
-    let mut addr_to = "".to_string(); //localhost:1212
-    let saved_addr_us = Arc::new(saved_config.addr_us.clone());
-
-    let mut choose = "3".to_string();
-    if saved_config.tui_interface {
-        let mut siv = Cursive::default();
-        siv.set_fps(60);
-        let mut files = "".to_string();
-        siv.add_fullscreen_layer(TextView::new("TcpChat"));
-
-        let mut layout = LinearLayout::vertical();
-        let saved_addr_us = Arc::clone(&saved_addr_us);
-        for file in fs::read_dir("history").unwrap() {
-            let file_name = file.unwrap().file_name().into_string().unwrap();
-            files += format!("{}\n", &file_name).as_str();
-            let saved = Arc::clone(&saved_addr_us);
-            layout.add_child(
-                Button::new(
-                    file_name.clone()[..file_name.clone().len() - 4].to_string(),
-                    move |s| {
-                        s.set_user_data(ReadedData {
-                            addr_to: file_name.clone()[..file_name.len() - 4].to_string(),
-                            addr_us: "".to_string(),
-                        });
-                        let mut layout = LinearLayout::vertical();
-                        if saved.is_empty() {
-                            layout.add_child(TextView::new("Adress us?"));
-                        } else {
-                            layout.add_child(TextView::new(format!(
-                                "Adress us? Leave empty for {}",
-                                saved
-                            )));
-                        }
-                        let addr_to = file_name.clone()[..file_name.len() - 4].to_string();
-                        layout.add_child(TextArea::new().with_name("adress_us"));
-                        let value = saved.clone();
-
-                        let ago = (OffsetDateTime::now_utc()
-                            - OffsetDateTime::parse(&last_com(addr_to.clone()).as_str(), &Rfc3339)
-                                .unwrap_or_else(|_| OffsetDateTime::now_utc()))
-                        .whole_minutes();
-
-                        let saved = saved.clone();
-                        let mut time = "".to_string();
-
-                        if ago > 180 {
-                            time = format!("( {} hours ago )", ago / 60);
-                        } else if ago == 0 {
-                            time = format!("( now )");
-                        } else if ago < 180 {
-                            time = format!("( {} minutes ago )", ago);
-                        } else if ago / 60 > 48 {
-                            time = format!("( {} days ago )", ago / 60 / 24);
-                        }
-                        s.add_layer(
-                            LinearLayout::vertical()
-                                .child(TextView::new(format!(
-                                    "Last communication with {} is on: {} {}",
-                                    addr_to,
-                                    last_com(addr_to.clone()),
-                                    time
-                                )))
-                                .child(
-                                    LinearLayout::horizontal()
-                                        .child(
-                                            Dialog::new()
-                                                .title("Are you sure?")
-                                                .content(layout)
-                                                .button("Yes", move |s| {
-                                                    tui_try_connect(
-                                                        s.cb_sink().clone(),
-                                                        value.clone().to_string(),
-                                                    );
-                                                })
-                                                .button("Cancel", |s| {
-                                                    s.pop_layer();
-                                                }),
-                                        )
-                                        .child(
-                                            Dialog::new()
-                                                .title(format!(
-                                                    "From previous convs with {}",
-                                                    file_name.clone()[..file_name.len() - 4]
-                                                        .to_string()
-                                                ))
-                                                .content(
-                                                    TextArea::new().disabled().content(
-                                                        fs::read_to_string(format!(
-                                                            "history/{}",
-                                                            file_name.clone()
-                                                        ))
-                                                        .unwrap_or_default(),
-                                                    ),
-                                                )
-                                                .scrollable(),
-                                        ),
-                                ),
-                        );
-                    },
-                )
-                .with_name("adress_select"),
-            );
-        }
-        let saved_addr_us = saved_addr_us.clone();
-        layout.add_child(Button::new("New...", move |s| {
-            let captured_addr_to = TextArea::new().with_name("adress_to");
-            let captured_addr_us = TextArea::new().with_name("adress_us");
-            let mut add_layout = LinearLayout::vertical();
-            add_layout.add_child(TextView::new("Adress to?"));
-            add_layout.add_child(captured_addr_to);
-            if saved_addr_us.is_empty() {
-                add_layout.add_child(TextView::new("Adress us?"));
-            } else {
-                add_layout.add_child(TextView::new(format!(
-                    "Adress us? Leave empty for {}",
-                    saved_addr_us
-                )));
+        let mut private = "".to_string();
+        match fs::read_to_string("keys/rsa_key") {
+            Ok(text) => private = text.to_string(),
+            Err(_) => {
+                println!("There is no RSA private key in running dir.")
             }
+        }
 
-            add_layout.add_child(captured_addr_us);
-            let saved = saved_addr_us.clone();
+        let mut public = "".to_string();
+        static CONNECTED: LazyLock<Mutex<String>> = LazyLock::new(|| Mutex::new(String::new()));
+        match fs::read_to_string("keys/rsa_key_public.pem") {
+            Ok(text) => public = text,
+            Err(_) => {
+                println!("There is no RSA public key in running dir.")
+            }
+        }
 
-            s.add_layer(
-                Dialog::new()
-                    .content(add_layout)
-                    .title("Start new conversation")
-                    .button("Start", move |s| {
-                        tui_try_connect(s.cb_sink().clone(), saved.clone().to_string());
-                    })
-                    .button("Cancel", |s| {
-                        s.pop_layer();
-                    }),
+        if !public.is_empty() && !private.is_empty() {
+            println!("There is rsa keys!");
+        } else {
+            println!(
+                "There is no encryption keys! You can generate pair with generate_my_keys.sh in directory!"
             );
-        }));
+        }
 
-        let mut main = LinearLayout::horizontal();
+        if !saved_config.encryption {
+            private = "".to_string();
+            public = "".to_string();
+            println!("Encryption disabled via config.");
+        }
+        if !saved_config.save_history {
+            println!("History saving disabled via config.");
+        }
+        /*
+                let message = "lol aboba";
+                let encrypt = encrypt_message(message.to_string(), public.clone());
+                println!("{}", encrypt);
+                println!("{}", decrypt_message(encrypt, private.clone()));
+        */
+        let mut addr_us = "".to_string(); //localhost:2121
+        let mut addr_to = "".to_string(); //localhost:1212
+        let saved_addr_us = Arc::new(saved_config.addr_us.clone());
 
-        main.add_child(Dialog::around(layout).title("Continue conversation with..."));
-        main.add_child(
+        let mut choose = "3".to_string();
+        if saved_config.tui_interface {
+            let mut siv = Cursive::default();
+            siv.set_fps(60);
+            let mut files = "".to_string();
+            siv.add_fullscreen_layer(TextView::new("TcpChat"));
+
+            let mut layout = LinearLayout::vertical();
+            let saved_addr_us = Arc::clone(&saved_addr_us);
+            for file in fs::read_dir("history").unwrap() {
+                let file_name = file.unwrap().file_name().into_string().unwrap();
+                files += format!("{}\n", &file_name).as_str();
+                let saved = Arc::clone(&saved_addr_us);
+                layout.add_child(
+                    Button::new(
+                        file_name.clone()[..file_name.clone().len() - 4].to_string(),
+                        move |s| {
+                            s.set_user_data(ReadedData {
+                                addr_to: file_name.clone()[..file_name.len() - 4].to_string(),
+                                addr_us: "".to_string(),
+                            });
+                            let mut layout = LinearLayout::vertical();
+                            if saved.is_empty() {
+                                layout.add_child(TextView::new("Adress us?"));
+                            } else {
+                                layout.add_child(TextView::new(format!(
+                                    "Adress us? Leave empty for {}",
+                                    saved
+                                )));
+                            }
+                            let addr_to = file_name.clone()[..file_name.len() - 4].to_string();
+                            layout.add_child(TextArea::new().with_name("adress_us"));
+                            let value = saved.clone();
+
+                            let ago = (OffsetDateTime::now_utc()
+                                - OffsetDateTime::parse(
+                                    &last_com(addr_to.clone()).as_str(),
+                                    &Rfc3339,
+                                )
+                                .unwrap_or_else(|_| OffsetDateTime::now_utc()))
+                            .whole_minutes();
+
+                            let saved = saved.clone();
+                            let mut time = "".to_string();
+
+                            if ago > 180 {
+                                time = format!("( {} hours ago )", ago / 60);
+                            } else if ago == 0 {
+                                time = format!("( now )");
+                            } else if ago < 180 {
+                                time = format!("( {} minutes ago )", ago);
+                            } else if ago / 60 > 48 {
+                                time = format!("( {} days ago )", ago / 60 / 24);
+                            }
+                            s.add_layer(
+                                LinearLayout::vertical()
+                                    .child(TextView::new(format!(
+                                        "Last communication with {} is on: {} {}",
+                                        addr_to,
+                                        last_com(addr_to.clone()),
+                                        time
+                                    )))
+                                    .child(
+                                        LinearLayout::horizontal()
+                                            .child(
+                                                Dialog::new()
+                                                    .title("Are you sure?")
+                                                    .content(layout)
+                                                    .button("Yes", move |s| {
+                                                        tui_try_connect(
+                                                            s.cb_sink().clone(),
+                                                            value.clone().to_string(),
+                                                        );
+                                                    })
+                                                    .button("Cancel", |s| {
+                                                        s.pop_layer();
+                                                    }),
+                                            )
+                                            .child(
+                                                Dialog::new()
+                                                    .title(format!(
+                                                        "From previous convs with {}",
+                                                        file_name.clone()[..file_name.len() - 4]
+                                                            .to_string()
+                                                    ))
+                                                    .content(
+                                                        TextArea::new().disabled().content(
+                                                            fs::read_to_string(format!(
+                                                                "history/{}",
+                                                                file_name.clone()
+                                                            ))
+                                                            .unwrap_or_default(),
+                                                        ),
+                                                    )
+                                                    .scrollable(),
+                                            ),
+                                    ),
+                            );
+                        },
+                    )
+                    .with_name("adress_select"),
+                );
+            }
+            let saved_addr_us = saved_addr_us.clone();
+            layout.add_child(Button::new("New...", move |s| {
+                let captured_addr_to = TextArea::new().with_name("adress_to");
+                let captured_addr_us = TextArea::new().with_name("adress_us");
+                let mut add_layout = LinearLayout::vertical();
+                add_layout.add_child(TextView::new("Adress to?"));
+                add_layout.add_child(captured_addr_to);
+                if saved_addr_us.is_empty() {
+                    add_layout.add_child(TextView::new("Adress us?"));
+                } else {
+                    add_layout.add_child(TextView::new(format!(
+                        "Adress us? Leave empty for {}",
+                        saved_addr_us
+                    )));
+                }
+
+                add_layout.add_child(captured_addr_us);
+                let saved = saved_addr_us.clone();
+
+                s.add_layer(
+                    Dialog::new()
+                        .content(add_layout)
+                        .title("Start new conversation")
+                        .button("Start", move |s| {
+                            tui_try_connect(s.cb_sink().clone(), saved.clone().to_string());
+                        })
+                        .button("Cancel", |s| {
+                            s.pop_layer();
+                        }),
+                );
+            }));
+
+            let mut main = LinearLayout::horizontal();
+
+            main.add_child(Dialog::around(layout).title("Continue conversation with..."));
+            main.add_child(
             Dialog::new()
                 .title("Menu")
                 .content(LinearLayout::vertical().child(Button::new("Delete history", |siv|{siv.add_layer(Dialog::new().title(StyledString::styled(
@@ -336,292 +340,297 @@ fn main() {
                         }).button("Cancel", |siv| {siv.pop_layer();}));
                     })))
         );
-        siv.add_layer(main);
-        siv.add_global_callback(Key::Esc, |s| {
-            s.add_layer(
-                Dialog::around(TextView::new("Closing conv in ").with_name("timer")).button(
-                    "Cancel",
-                    |s| {
-                        s.pop_layer();
-                    },
-                ),
-            );
-            let cb_sink = Arc::new(s.cb_sink().clone());
-            thread::spawn(move || {
-                for i in (0..=50).rev() {
-                    let (tx, rx) = mpsc::channel();
-                    let _ = cb_sink.send(Box::new(move |s: &mut Cursive| {
-                        let exists = match s.find_name::<TextView>("timer") {
-                            None => false,
-                            Some(mut timer) => {
-                                timer.set_content(format!("Closing in {},{}", i / 10 % 10, i % 10));
-                                true
+            siv.add_layer(main);
+            siv.add_global_callback(Key::Esc, |s| {
+                s.add_layer(
+                    Dialog::around(TextView::new("Closing conv in ").with_name("timer")).button(
+                        "Cancel",
+                        |s| {
+                            s.pop_layer();
+                        },
+                    ),
+                );
+                let cb_sink = Arc::new(s.cb_sink().clone());
+                thread::spawn(move || {
+                    for i in (0..=50).rev() {
+                        let (tx, rx) = mpsc::channel();
+                        let _ = cb_sink.send(Box::new(move |s: &mut Cursive| {
+                            let exists = match s.find_name::<TextView>("timer") {
+                                None => false,
+                                Some(mut timer) => {
+                                    timer.set_content(format!(
+                                        "Closing in {},{}",
+                                        i / 10 % 10,
+                                        i % 10
+                                    ));
+                                    true
+                                }
+                            };
+                            let _ = tx.send(exists);
+
+                            if i == 0 {
+                                s.quit();
                             }
-                        };
-                        let _ = tx.send(exists);
+                        }));
 
-                        if i == 0 {
-                            s.quit();
+                        match rx.recv() {
+                            Ok(true) => (),
+                            _ => break,
                         }
-                    }));
 
-                    match rx.recv() {
-                        Ok(true) => (),
-                        _ => break,
+                        thread::sleep(Duration::from_millis(100));
                     }
-
-                    thread::sleep(Duration::from_millis(100));
-                }
+                });
             });
-        });
-        siv.run();
-        let user_data = siv.take_user_data::<ReadedData>();
-        if user_data.is_none() {
-            return;
-        }
-        let user_data = user_data.unwrap();
-        println!("{} aboba {}", user_data.addr_to, user_data.addr_us);
-        addr_to = user_data.addr_to.clone();
-        addr_us = user_data.addr_us.clone();
-        if addr_us.is_empty() {
-            return;
-        }
+            siv.run();
+            let user_data = siv.take_user_data::<ReadedData>();
+            if user_data.is_none() {
+                return;
+            }
+            let user_data = user_data.unwrap();
+            println!("{} aboba {}", user_data.addr_to, user_data.addr_us);
+            addr_to = user_data.addr_to.clone();
+            addr_us = user_data.addr_us.clone();
+            if addr_us.is_empty() {
+                return;
+            }
 
-        siv.quit();
-    } else {
-        println!(
-            "choose operation mode 2-sender 1-listener 3 - client + server 4 - choose long term adress and port 5 delete conversation history 6 (Re)generate encryption keys"
-        );
-        choose = "".to_string();
-        io::stdin().read_line(&mut choose).unwrap();
-    }
-
-    match choose.trim() {
-        "6" => {
-            print!(
-                "Are you sure? It will delete all previous keys and probably will mark you as you were another person or from other computer y/n "
+            siv.quit();
+        } else {
+            println!(
+                "choose operation mode 2-sender 1-listener 3 - client + server 4 - choose long term adress and port 5 delete conversation history 6 (Re)generate encryption keys"
             );
-            io::stdout().flush().unwrap();
-            let mut choose = "".to_string();
+            choose = "".to_string();
             io::stdin().read_line(&mut choose).unwrap();
-            if choose.trim().to_ascii_lowercase() == "y" {
+        }
+
+        match choose.trim() {
+            "6" => {
                 print!(
-                    "Choose keys size, i recommend 4096 (default), but if you got any problem use 2048\n size:"
+                    "Are you sure? It will delete all previous keys and probably will mark you as you were another person or from other computer y/n "
                 );
                 io::stdout().flush().unwrap();
                 let mut choose = "".to_string();
-                if choose.is_empty() {
-                    choose = "4096".to_string();
-                }
                 io::stdin().read_line(&mut choose).unwrap();
-                regenerate_keys(choose.trim().parse().unwrap());
-            }
-        }
-        "5" => {
-            println!("Sure? y/n");
-            let mut choose = "".to_string();
-            io::stdin().read_line(&mut choose).unwrap();
-            if choose.trim().to_ascii_lowercase() == "y" {
-                for entry in fs::read_dir("history").unwrap() {
-                    fs::remove_file(entry.unwrap().path()).unwrap();
-                }
-                println!("History deleted");
-            }
-        }
-        "4" => {
-            println!("Type your adress");
-            let mut choose = "".to_string();
-            io::stdin().read_line(&mut choose).unwrap();
-            saved_config.addr_us = choose.trim().to_string();
-            let toml_content = toml::to_string(&saved_config).unwrap();
-            fs::write("config.toml", toml_content.as_bytes()).unwrap();
-        }
-        "1" => {
-            let listener = TcpListener::bind("localhost:1212").unwrap();
-
-            for mut stream in listener.incoming() {
-                println!("Got stream connection");
-
-                stream.unwrap().print_stream(private.clone());
-                println!("connection closed");
-            }
-        }
-
-        "2" => {
-            let mut sender = TcpSender::new("localhost:1212".to_string(), 5).unwrap(); //drops stream if goes out of scope
-
-            loop {
-                let mut message = "".to_string();
-                io::stdin().read_line(&mut message).unwrap();
-                sender.reply(message.to_string()).unwrap();
-            }
-        }
-
-        "3" => {
-            let print_gag = Gag::stdout().unwrap();
-
-            if saved_config.tui_interface {
-                thread::spawn(|| {
-                    let mut siv = Cursive::default();
-                    siv.add_layer(TextView::new(" ").with_name("stick"));
-                    //борровит, клонит, отпускает
-                    let cb_sink = { siv.cb_sink().clone() };
-                    thread::spawn(move || {
-                        let mut n = 0;
-                        unsafe {
-                            while CONNECTED.lock().unwrap().as_str() != "connected" {
-                                thread::sleep(Duration::from_millis(100));
-                                n += 1;
-                                cb_sink
-                                    .send(Box::new(move |s| {
-                                        s.call_on_name("stick", |h: &mut TextView| {
-                                            h.set_content(format!(
-                                                "{}\n{}",
-                                                CONNECTED.lock().unwrap().as_str(),
-                                                "-\\|/".chars().nth(n % 4).unwrap()
-                                            ))
-                                        });
-                                    }))
-                                    .unwrap();
-                            }
-                        }
-
-                        cb_sink
-                            .send(Box::new(|s| {
-                                s.quit();
-                            }))
-                            .unwrap();
-                        unsafe {
-                            CONNECTED.lock().unwrap().clear();
-                            CONNECTED.lock().unwrap().push_str("finished");
-                        };
-                    });
-                    siv.run();
-                });
-            } else {
-                drop(print_gag);
-            }
-
-            if addr_to.is_empty() && addr_us.is_empty() {
-                println!("who is we chatting with? Leave blank if we want use handshake");
-                std::io::stdin().read_line(&mut addr_to).unwrap();
-                if !saved_config.addr_us.is_empty() {
-                    println!("who are we? Leave empty for {}", saved_config.addr_us);
-                    std::io::stdin().read_line(&mut addr_us).unwrap();
-                    if addr_us.trim().is_empty() {
-                        println!("using {} for us", saved_config.addr_us);
-                        addr_us = saved_config.addr_us;
+                if choose.trim().to_ascii_lowercase() == "y" {
+                    print!(
+                        "Choose keys size, i recommend 4096 (default), but if you got any problem use 2048\n size:"
+                    );
+                    io::stdout().flush().unwrap();
+                    let mut choose = "".to_string();
+                    if choose.is_empty() {
+                        choose = "4096".to_string();
                     }
-                } else {
-                    println!("who are we?");
-                    std::io::stdin().read_line(&mut addr_us).unwrap();
+                    io::stdin().read_line(&mut choose).unwrap();
+                    regenerate_keys(choose.trim().parse().unwrap());
+                }
+            }
+            "5" => {
+                println!("Sure? y/n");
+                let mut choose = "".to_string();
+                io::stdin().read_line(&mut choose).unwrap();
+                if choose.trim().to_ascii_lowercase() == "y" {
+                    for entry in fs::read_dir("history").unwrap() {
+                        fs::remove_file(entry.unwrap().path()).unwrap();
+                    }
+                    println!("History deleted");
+                }
+            }
+            "4" => {
+                println!("Type your adress");
+                let mut choose = "".to_string();
+                io::stdin().read_line(&mut choose).unwrap();
+                saved_config.addr_us = choose.trim().to_string();
+                let toml_content = toml::to_string(&saved_config).unwrap();
+                fs::write("config.toml", toml_content.as_bytes()).unwrap();
+            }
+            "1" => {
+                let listener = TcpListener::bind("localhost:1212").unwrap();
+
+                for mut stream in listener.incoming() {
+                    println!("Got stream connection");
+
+                    stream.unwrap().print_stream(private.clone());
+                    println!("connection closed");
                 }
             }
 
-            addr_to = addr_to.trim().to_string();
-            addr_us = addr_us.trim().to_string();
+            "2" => {
+                let mut sender = TcpSender::new("localhost:1212".to_string(), 5).unwrap(); //drops stream if goes out of scope
 
-            /*
-                        let mut text = TextView::new("").with_name("loading_text");
-                        cursive_flexi_logger_view::show_flexi_logger_debug_console(&mut siv);
+                loop {
+                    let mut message = "".to_string();
+                    io::stdin().read_line(&mut message).unwrap();
+                    sender.reply(message.to_string()).unwrap();
+                }
+            }
+
+            "3" => {
+                let print_gag = Gag::stdout().unwrap();
+
+                if saved_config.tui_interface {
+                    thread::spawn(|| {
+                        let mut siv = Cursive::default();
+                        siv.add_layer(TextView::new(" ").with_name("stick"));
+                        //борровит, клонит, отпускает
+                        let cb_sink = { siv.cb_sink().clone() };
+                        thread::spawn(move || {
+                            let mut n = 0;
+                            unsafe {
+                                while CONNECTED.lock().unwrap().as_str() != "connected" {
+                                    thread::sleep(Duration::from_millis(100));
+                                    n += 1;
+                                    cb_sink
+                                        .send(Box::new(move |s| {
+                                            s.call_on_name("stick", |h: &mut TextView| {
+                                                h.set_content(format!(
+                                                    "{}\n{}",
+                                                    CONNECTED.lock().unwrap().as_str(),
+                                                    "-\\|/".chars().nth(n % 4).unwrap()
+                                                ))
+                                            });
+                                        }))
+                                        .unwrap();
+                                }
+                            }
+
+                            cb_sink
+                                .send(Box::new(|s| {
+                                    s.quit();
+                                }))
+                                .unwrap();
+                            unsafe {
+                                CONNECTED.lock().unwrap().clear();
+                                CONNECTED.lock().unwrap().push_str("finished");
+                            };
+                        });
                         siv.run();
-            */
-            /*
-            let mut connected = Arc::new(Mutex::new(false));
-            let connected_clone = connected.clone();
-            thread::spawn(move || {
-                let mut siv = Cursive::new();
-                siv.add_layer(TextView::new("Trying to connect..."));
-                siv.run();
+                    });
+                } else {
+                    drop(print_gag);
+                }
 
-            });
-            */
+                if addr_to.is_empty() && addr_us.is_empty() {
+                    println!("who is we chatting with? Leave blank if we want use handshake");
+                    std::io::stdin().read_line(&mut addr_to).unwrap();
+                    if !saved_config.addr_us.is_empty() {
+                        println!("who are we? Leave empty for {}", saved_config.addr_us);
+                        std::io::stdin().read_line(&mut addr_us).unwrap();
+                        if addr_us.trim().is_empty() {
+                            println!("using {} for us", saved_config.addr_us);
+                            addr_us = saved_config.addr_us;
+                        }
+                    } else {
+                        println!("who are we?");
+                        std::io::stdin().read_line(&mut addr_us).unwrap();
+                    }
+                }
 
-            //let thread_sender = start_thread_sender(addr_to);
-            println!("Sending handshake");
-            CONNECTED.lock().unwrap().clear();
-            CONNECTED.lock().unwrap().push_str("Sending handshake");
-            let addr_us_clone = addr_us.clone();
+                addr_to = addr_to.trim().to_string();
+                addr_us = addr_us.trim().to_string();
 
-            let handshake_thread =
-                thread::spawn(move || start_listening_handshake(addr_us_clone.as_str()).unwrap());
+                /*
+                            let mut text = TextView::new("").with_name("loading_text");
+                            cursive_flexi_logger_view::show_flexi_logger_debug_console(&mut siv);
+                            siv.run();
+                */
+                /*
+                let mut connected = Arc::new(Mutex::new(false));
+                let connected_clone = connected.clone();
+                thread::spawn(move || {
+                    let mut siv = Cursive::new();
+                    siv.add_layer(TextView::new("Trying to connect..."));
+                    siv.run();
 
-            let mut handshake = String::new();
-            let mut ping = u128::default();
-            if !addr_to.is_empty() {
-                send_handshake(addr_to, addr_us.clone(), public.clone());
+                });
+                */
+
+                //let thread_sender = start_thread_sender(addr_to);
+                println!("Sending handshake");
                 CONNECTED.lock().unwrap().clear();
-                CONNECTED.lock().unwrap().push_str("sended handshake");
-                let timer = Instant::now();
-                handshake = handshake_thread.join().unwrap();
-                CONNECTED.lock().unwrap().clear();
-                CONNECTED.lock().unwrap().push_str("got handshake");
-                ping = timer.elapsed().as_millis();
-            } else {
-                CONNECTED.lock().unwrap().clear();
-                CONNECTED.lock().unwrap().push_str("waiting for handshake");
-                handshake = handshake_thread.join().unwrap();
-                CONNECTED.lock().unwrap().clear();
-                CONNECTED.lock().unwrap().push_str("got handshake");
-                let timer = Instant::now();
+                CONNECTED.lock().unwrap().push_str("Sending handshake");
+                let addr_us_clone = addr_us.clone();
+
+                let handshake_thread = thread::spawn(move || {
+                    start_listening_handshake(addr_us_clone.as_str()).unwrap()
+                });
+
+                let mut handshake = String::new();
+                let mut ping = u128::default();
+                if !addr_to.is_empty() {
+                    send_handshake(addr_to, addr_us.clone(), public.clone());
+                    CONNECTED.lock().unwrap().clear();
+                    CONNECTED.lock().unwrap().push_str("sended handshake");
+                    let timer = Instant::now();
+                    handshake = handshake_thread.join().unwrap();
+                    CONNECTED.lock().unwrap().clear();
+                    CONNECTED.lock().unwrap().push_str("got handshake");
+                    ping = timer.elapsed().as_millis();
+                } else {
+                    CONNECTED.lock().unwrap().clear();
+                    CONNECTED.lock().unwrap().push_str("waiting for handshake");
+                    handshake = handshake_thread.join().unwrap();
+                    CONNECTED.lock().unwrap().clear();
+                    CONNECTED.lock().unwrap().push_str("got handshake");
+                    let timer = Instant::now();
+                    println!("{handshake}");
+                    let begin_public = handshake.find("public:").unwrap();
+                    let addr_to = &handshake.as_str()[14..begin_public];
+                    let public_conv = &handshake.as_str()[begin_public + 8..&handshake.len() - 1]
+                        .replace("\\n", "\n");
+                    println!(
+                        "gotted handshake! from {addr_to}\nand public {}",
+                        public_conv
+                    );
+                    ping = timer.elapsed().as_millis();
+                    send_handshake(addr_to.to_string(), addr_us.clone(), public.clone()).unwrap();
+                    CONNECTED.lock().unwrap().clear();
+                    CONNECTED.lock().unwrap().push_str("sended handshake");
+                }
+
                 println!("{handshake}");
                 let begin_public = handshake.find("public:").unwrap();
-                let addr_to = &handshake.as_str()[14..begin_public];
-                let public_conv = &handshake.as_str()[begin_public + 8..&handshake.len() - 1]
-                    .replace("\\n", "\n");
+                let addr_to = handshake.as_str()[14..begin_public].to_string();
+                let public_conv =
+                    handshake.as_str()[begin_public + 8..&handshake.len() - 1].replace("\\n", "\n");
                 println!(
                     "gotted handshake! from {addr_to}\nand public {}",
                     public_conv
                 );
-                ping = timer.elapsed().as_millis();
-                send_handshake(addr_to.to_string(), addr_us.clone(), public.clone()).unwrap();
                 CONNECTED.lock().unwrap().clear();
-                CONNECTED.lock().unwrap().push_str("sended handshake");
-            }
-
-            println!("{handshake}");
-            let begin_public = handshake.find("public:").unwrap();
-            let addr_to = handshake.as_str()[14..begin_public].to_string();
-            let public_conv =
-                handshake.as_str()[begin_public + 8..&handshake.len() - 1].replace("\\n", "\n");
-            println!(
-                "gotted handshake! from {addr_to}\nand public {}",
-                public_conv
-            );
-            CONNECTED.lock().unwrap().clear();
-            if saved_config.tui_interface {
-                unsafe {
-                    CONNECTED.lock().unwrap().push_str("connected");
-                    while CONNECTED.lock().unwrap().as_str() != "finished" {
-                        thread::sleep(Duration::from_secs(1));
+                if saved_config.tui_interface {
+                    unsafe {
+                        CONNECTED.lock().unwrap().push_str("connected");
+                        while CONNECTED.lock().unwrap().as_str() != "finished" {
+                            thread::sleep(Duration::from_secs(1));
+                        }
                     }
                 }
-            }
-            let mut safe = is_familliar_key(addr_to.to_string(), public_conv.to_string());
-            if !saved_config.keys_auth {
-                safe = true;
-            }
-            let addr_to = Arc::new(addr_to);
-            let public_conv = Arc::new(public_conv);
-            timestamp(addr_to.clone().to_string());
-            println!("to {} us {addr_us}", addr_to.clone());
+                let mut safe = is_familliar_key(addr_to.to_string(), public_conv.to_string());
+                if !saved_config.keys_auth {
+                    safe = true;
+                }
+                let addr_to = Arc::new(addr_to);
+                let public_conv = Arc::new(public_conv);
+                timestamp(addr_to.clone().to_string());
+                println!("to {} us {addr_us}", addr_to.clone());
 
-            if saved_config.tui_interface {
-                let mut siv = Cursive::default();
+                if saved_config.tui_interface {
+                    let mut siv = Cursive::default();
 
-                let mut conv = LinearLayout::vertical();
+                    let mut conv = LinearLayout::vertical();
 
-                let thread_listen = start_thread_listener(
-                    addr_us.clone(),
-                    private.clone(),
-                    addr_to.to_string(),
-                    saved_config.save_history,
-                    Some(siv.cb_sink().clone()),
-                );
+                    let thread_listen = start_thread_listener(
+                        addr_us.clone(),
+                        private.clone(),
+                        addr_to.to_string(),
+                        saved_config.save_history,
+                        Some(siv.cb_sink().clone()),
+                    );
 
-                let send_stream =
-                    Arc::from(Mutex::from(create_sender_tui(addr_to.to_string()).unwrap()));
-                conv.add_child(
+                    let send_stream =
+                        Arc::from(Mutex::from(create_sender_tui(addr_to.to_string()).unwrap()));
+                    conv.add_child(
                     TextView::new(format!(
                         "from {} to {} conversation. Encryption: our: {} their: {} approx ping: {}",
                         addr_us,
@@ -633,199 +642,204 @@ fn main() {
                     .full_width(),
                 );
 
-                conv.add_child(
-                    (TextArea::new().content("").disabled().with_name("Chat"))
-                        .scrollable()
-                        .scroll_strategy(view::ScrollStrategy::StickToBottom)
-                        .full_width(),
-                );
-                conv.add_child(DummyView.fixed_height(1));
-                let mut answer = LinearLayout::horizontal();
-                answer.add_child(TextArea::new().with_name("message"));
-                let public_to: Arc<String> = Arc::from(public_conv.to_string().clone());
-                answer.add_child(Button::new("reply", move |s| {
-                    s.focus_name("message").unwrap();
-                    let message = s.call_on_name("message", |h: &mut TextArea| {
-                        let content = h.get_content().to_string();
-                        h.set_content("");
-
-                        content
-                    });
-
-                    if public_to.clone().is_empty() {
-                        let chat = s.call_on_name("Chat", |h: &mut TextArea| {
-                            h.set_content(
-                                h.get_content().to_string()
-                                    + message.clone().unwrap().as_str()
-                                    + "    [our]\n",
-                            );
-                        });
-                        send_stream
-                            .clone()
-                            .lock()
-                            .unwrap()
-                            .reply(message.unwrap() + "\n")
-                            .unwrap();
-                    } else {
-                        let chat = s.call_on_name("Chat", |h: &mut TextArea| {
-                            h.set_content(
-                                h.get_content().to_string()
-                                    + message.clone().unwrap().as_str()
-                                    + "    [our secured]\n",
-                            );
-                        });
-                        send_stream
-                            .clone()
-                            .lock()
-                            .unwrap()
-                            .reply(
-                                encrypt_message(message.unwrap(), public_to.clone().to_string())
-                                    + "\n",
-                            )
-                            .unwrap();
-                    }
-                }));
-                conv.add_child(answer);
-                siv.pop_layer();
-                siv.pop_layer();
-                siv.add_fullscreen_layer(conv);
-                siv.add_global_callback(Key::Esc, |s| {
-                    s.add_layer(
-                        Dialog::around(TextView::new("Closing conv in ").with_name("timer"))
-                            .button("Cancel", |s| {
-                                s.pop_layer();
-                            }),
+                    conv.add_child(
+                        (TextArea::new().content("").disabled().with_name("Chat"))
+                            .scrollable()
+                            .scroll_strategy(view::ScrollStrategy::StickToBottom)
+                            .full_width(),
                     );
-                    let cb_sink = Arc::new(s.cb_sink().clone());
-                    thread::spawn(move || {
-                        for i in (0..=50).rev() {
-                            let (tx, rx) = mpsc::channel();
-                            let _ = cb_sink.send(Box::new(move |s: &mut Cursive| {
-                                let exists = match s.find_name::<TextView>("timer") {
-                                    None => false,
-                                    Some(mut timer) => {
-                                        timer.set_content(format!(
-                                            "Closing in {},{}",
-                                            i / 10 % 10,
-                                            i % 10
-                                        ));
-                                        true
-                                    }
-                                };
-                                let _ = tx.send(exists);
+                    conv.add_child(DummyView.fixed_height(1));
+                    let mut answer = LinearLayout::horizontal();
+                    answer.add_child(TextArea::new().with_name("message"));
+                    let public_to: Arc<String> = Arc::from(public_conv.to_string().clone());
+                    answer.add_child(Button::new("reply", move |s| {
+                        s.focus_name("message").unwrap();
+                        let message = s.call_on_name("message", |h: &mut TextArea| {
+                            let content = h.get_content().to_string();
+                            h.set_content("");
 
-                                if i == 0 {
-                                    s.quit();
-                                }
-                            }));
+                            content
+                        });
 
-                            match rx.recv() {
-                                Ok(true) => (),
-                                _ => break,
-                            }
-
-                            thread::sleep(Duration::from_millis(100));
+                        if public_to.clone().is_empty() {
+                            let chat = s.call_on_name("Chat", |h: &mut TextArea| {
+                                h.set_content(
+                                    h.get_content().to_string()
+                                        + message.clone().unwrap().as_str()
+                                        + "    [our]\n",
+                                );
+                            });
+                            send_stream
+                                .clone()
+                                .lock()
+                                .unwrap()
+                                .reply(message.unwrap() + "\n")
+                                .unwrap();
+                        } else {
+                            let chat = s.call_on_name("Chat", |h: &mut TextArea| {
+                                h.set_content(
+                                    h.get_content().to_string()
+                                        + message.clone().unwrap().as_str()
+                                        + "    [our secured]\n",
+                                );
+                            });
+                            send_stream
+                                .clone()
+                                .lock()
+                                .unwrap()
+                                .reply(
+                                    encrypt_message(
+                                        message.unwrap(),
+                                        public_to.clone().to_string(),
+                                    ) + "\n",
+                                )
+                                .unwrap();
                         }
+                    }));
+                    conv.add_child(answer);
+                    siv.pop_layer();
+                    siv.pop_layer();
+                    siv.add_fullscreen_layer(conv);
+                    siv.add_global_callback(Key::Esc, |s| {
+                        s.add_layer(
+                            Dialog::around(TextView::new("Closing conv in ").with_name("timer"))
+                                .button("Cancel", |s| {
+                                    s.pop_layer();
+                                }),
+                        );
+                        let cb_sink = Arc::new(s.cb_sink().clone());
+                        thread::spawn(move || {
+                            for i in (0..=50).rev() {
+                                let (tx, rx) = mpsc::channel();
+                                let _ = cb_sink.send(Box::new(move |s: &mut Cursive| {
+                                    let exists = match s.find_name::<TextView>("timer") {
+                                        None => false,
+                                        Some(mut timer) => {
+                                            timer.set_content(format!(
+                                                "Closing in {},{}",
+                                                i / 10 % 10,
+                                                i % 10
+                                            ));
+                                            true
+                                        }
+                                    };
+                                    let _ = tx.send(exists);
+
+                                    if i == 0 {
+                                        s.quit();
+                                    }
+                                }));
+
+                                match rx.recv() {
+                                    Ok(true) => (),
+                                    _ => break,
+                                }
+
+                                thread::sleep(Duration::from_millis(100));
+                            }
+                        });
                     });
-                });
-                if !safe {
-                    let mut message = StyledString::new();
-                    let previous = get_key(addr_to.clone().to_string());
-                    let now = public_conv[..90].to_string();
-                    if previous.is_empty() {
-                        message.append_plain(
+                    if !safe {
+                        let mut message = StyledString::new();
+                        let previous = get_key(addr_to.clone().to_string());
+                        let now = public_conv[..90].to_string();
+                        if previous.is_empty() {
+                            message.append_plain(
                             "The user you are communicating with is new.\nIf this is unexpected - drop connection.\n\n",
                         );
-                    } else {
-                        message.append_plain(
-                            "The user you are communicating with is using another key!\n",
-                        );
-                        message.append_plain("Potentially it could be ");
-                        message.append_styled(
-                            "another person!\n\n",
-                            ColorStyle::new(BaseColor::White, BaseColor::Red),
-                        );
-                    }
-
-                    message.append_styled(
-                        format!("Previous: {}...\n\n", previous),
-                        ColorStyle::new(BaseColor::White, BaseColor::Green),
-                    );
-                    message.append_styled(
-                        format!("Now: {}...\n\n", now),
-                        ColorStyle::new(BaseColor::White, BaseColor::Yellow),
-                    );
-                    siv.add_layer(
-                        Dialog::new()
-                            .title(StyledString::styled(
-                                "Warning!",
+                        } else {
+                            message.append_plain(
+                                "The user you are communicating with is using another key!\n",
+                            );
+                            message.append_plain("Potentially it could be ");
+                            message.append_styled(
+                                "another person!\n\n",
                                 ColorStyle::new(BaseColor::White, BaseColor::Red),
-                            ))
-                            .content(TextView::new(
-                                message, /*public_conv[..90].to_string(),
-                                        get_key(addr_to.clone().to_string())
+                            );
+                        }
+
+                        message.append_styled(
+                            format!("Previous: {}...\n\n", previous),
+                            ColorStyle::new(BaseColor::White, BaseColor::Green),
+                        );
+                        message.append_styled(
+                            format!("Now: {}...\n\n", now),
+                            ColorStyle::new(BaseColor::White, BaseColor::Yellow),
+                        );
+                        siv.add_layer(
+                            Dialog::new()
+                                .title(StyledString::styled(
+                                    "Warning!",
+                                    ColorStyle::new(BaseColor::White, BaseColor::Red),
+                                ))
+                                .content(TextView::new(
+                                    message, /*public_conv[..90].to_string(),
+                                            get_key(addr_to.clone().to_string())
 
 
-                                        */
-                            ))
-                            .button("Close connection", |s| {
-                                s.quit();
-                            })
-                            .button("Remember new key", {
-                                let addr_to = Arc::clone(&addr_to);
-                                let public_conv = Arc::clone(&public_conv);
-                                move |s| {
-                                    keystamp(addr_to.to_string(), public_conv.to_string());
+                                            */
+                                ))
+                                .button("Close connection", |s| {
+                                    s.quit();
+                                })
+                                .button("Remember new key", {
+                                    let addr_to = Arc::clone(&addr_to);
+                                    let public_conv = Arc::clone(&public_conv);
+                                    move |s| {
+                                        keystamp(addr_to.to_string(), public_conv.to_string());
+                                        s.pop_layer();
+                                    }
+                                })
+                                .button("Skip this time", |s| {
                                     s.pop_layer();
-                                }
-                            })
-                            .button("Skip this time", |s| {
-                                s.pop_layer();
-                            }),
-                    );
-                }
-                siv.run();
-            } else {
-                timestamp(addr_to.to_string());
-                let thread_listen = start_thread_listener(
-                    addr_us.clone(),
-                    private.clone(),
-                    addr_to.to_string(),
-                    saved_config.save_history,
-                    None,
-                );
-                let thread_sender =
-                    start_thread_sender(addr_to.to_string(), public_conv.to_string());
-                println!(
-                    "from {} to {} conversation. Encryption: our: {} their: {} ping todo",
-                    addr_us,
-                    addr_to,
-                    !public.is_empty(),
-                    !public_conv.is_empty()
-                );
-
-                if !safe {
-                    println!(
-                        "Warning!\n
-                        The user you are communicating with is using another key!\n
-                        Potentially it could be another person!\n
-                        y - remember key\n
-                        n - drop connection\n
-                        choose: "
-                    );
-                    let mut choose = String::new();
-                    io::stdin().read_to_string(&mut choose).unwrap();
-                    if choose == "y" {
-                        keystamp(addr_to.clone().to_string(), public_conv.clone().to_string());
-                    } else {
-                        return;
+                                }),
+                        );
                     }
-                }
-                thread_sender.join().unwrap();
-            }
-        }
+                    siv.run();
+                } else {
+                    timestamp(addr_to.to_string());
+                    let thread_listen = start_thread_listener(
+                        addr_us.clone(),
+                        private.clone(),
+                        addr_to.to_string(),
+                        saved_config.save_history,
+                        None,
+                    );
 
-        &_ => {}
+                    if !safe {
+                        println!(
+"Warning!\n
+The user you are communicating with is using another key!\n
+Potentially it could be another person!\n
+y - remember key\n
+n - drop connection\n
+choose: "
+                        );
+                        let mut choose = String::new();
+                        io::stdin().read_line(&mut choose).unwrap();
+                        if choose.trim() == "y" {
+                            keystamp(addr_to.clone().to_string(), public_conv.clone().to_string());
+                        } else {
+                            continue;
+                        }
+                    }
+
+                    let thread_sender =
+                        start_thread_sender(addr_to.to_string(), public_conv.to_string());
+                    println!(
+                        "from {} to {} conversation. Encryption: our: {} their: {} ping todo",
+                        addr_us,
+                        addr_to,
+                        !public.is_empty(),
+                        !public_conv.is_empty()
+                    );
+
+                    thread_sender.join().unwrap();
+                }
+            }
+
+            &_ => {}
+        }
     }
 }
 fn encrypt_message(message: String, public_to: String) -> String {
