@@ -2,4 +2,4 @@ addr_us = "0.0.0.0:2424"
 encryption = true
 keys_auth = true
 save_history = true
-tui_interface = false
+tui_interface = true
