@@ -7,7 +7,7 @@ use cursive::{
         enumset::__internal::EnumSetTypeRepr,
         time::{OffsetDateTime, ext::NumericalDuration, format_description::well_known::Rfc3339},
     },
-    theme::{BaseColor, Color, ColorStyle, ColorType},
+    theme::{BaseColor, Color, ColorStyle, ColorType, Style},
     utils::{lines::simple::Span, markup::StyledString},
     view::{self, Nameable, Resizable, Scrollable, Selector},
     views::{
@@ -129,7 +129,7 @@ fn main() {
             .as_str();
             siv.add_fullscreen_layer(TextView::new(StyledString::styled(
                 status,
-                ColorStyle::new(Color::TerminalDefault, Color::TerminalDefault),
+                Style::from(cursive::theme::Effect::Blink),
             )));
 
             let mut layout = LinearLayout::vertical();
@@ -654,7 +654,7 @@ fn main() {
                 );
 
                     conv.add_child(
-                        (TextArea::new().content("").disabled().with_name("Chat"))
+                        (TextView::new(StyledString::new()).with_name("Chat"))
                             .scrollable()
                             .scroll_strategy(view::ScrollStrategy::StickToBottom)
                             .full_width(),
@@ -673,12 +673,8 @@ fn main() {
                         });
 
                         if public_to.clone().is_empty() {
-                            let chat = s.call_on_name("Chat", |h: &mut TextArea| {
-                                h.set_content(
-                                    h.get_content().to_string()
-                                        + message.clone().unwrap().as_str()
-                                        + "    [our]\n",
-                                );
+                            let chat = s.call_on_name("Chat", |h: &mut TextView| {
+                                h.append(message.clone().unwrap() + "    [our]\n");
                             });
                             send_stream
                                 .clone()
@@ -687,12 +683,8 @@ fn main() {
                                 .reply(message.unwrap() + "\n")
                                 .unwrap();
                         } else {
-                            let chat = s.call_on_name("Chat", |h: &mut TextArea| {
-                                h.set_content(
-                                    h.get_content().to_string()
-                                        + message.clone().unwrap().as_str()
-                                        + "    [our secured]\n",
-                                );
+                            let chat = s.call_on_name("Chat", |h: &mut TextView| {
+                                h.append(message.clone().unwrap() + "    [our secured]\n");
                             });
                             send_stream
                                 .clone()
@@ -960,20 +952,17 @@ fn start_thread_listener(
                                     cb_sink
                                         .unwrap()
                                         .send(Box::new(move |s| {
-                                            s.call_on_name("Chat", |view: &mut TextArea| {
-                                                let content = view.get_content();
+                                            s.call_on_name("Chat", |view: &mut TextView| {
                                                 if private_us.is_empty() {
-                                                    view.set_content(
-                                                        content.to_string()
-                                                            + decrypt_message(mes, private_us)
-                                                                .as_str()
+                                                    view.append(
+                                                        decrypt_message(mes, private_us)
+                                                            .to_string()
                                                             + "    [conversator]\n",
                                                     );
                                                 } else {
-                                                    view.set_content(
-                                                        content.to_string()
-                                                            + decrypt_message(mes, private_us)
-                                                                .as_str()
+                                                    view.append(
+                                                        decrypt_message(mes, private_us)
+                                                            .to_string()
                                                             + "    [conversator secured]\n",
                                                     );
                                                 }
