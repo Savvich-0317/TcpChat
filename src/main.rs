@@ -127,9 +127,8 @@ fn main() {
                 saved_config.keys_auth, saved_config.encryption, saved_config.save_history
             )
             .as_str();
-            siv.add_fullscreen_layer(TextView::new(StyledString::styled(
-                status,
-                Style::from(cursive::theme::Effect::Blink),
+            siv.add_fullscreen_layer(TextView::new(convert_to_style(
+                "message !!asdawd!! asdwadasdaw !!aboba!!".to_string(),
             )));
 
             let mut layout = LinearLayout::vertical();
@@ -684,7 +683,13 @@ fn main() {
                                 .unwrap();
                         } else {
                             let chat = s.call_on_name("Chat", |h: &mut TextView| {
-                                h.append(message.clone().unwrap() + "    [our secured]\n");
+                                let mut styled = StyledString::new();
+                                styled.append_plain(message.clone().unwrap());
+                                styled.append_styled(
+                                    "    [our secured]\n",
+                                    Style::from(cursive::theme::Effect::Blink),
+                                );
+                                h.append(styled);
                             });
                             send_stream
                                 .clone()
@@ -1184,6 +1189,29 @@ fn ascii() -> String {
     }
     finaline
 }
+//#TODO burn this place down
+fn convert_to_style(message: String) -> StyledString {
+    let mut styled = StyledString::new();
+    if message.contains("!!") {
+        let mark: Vec<_> = message.match_indices("!!").collect();
+        styled.append_plain(message[0..mark[0].0].to_string());
+        for i in 1..mark.len() - mark.len() % 2 {
+            styled.append_styled(
+                message[mark[i - 1].0 + 2..mark[i].0].to_string(),
+                Style::from(cursive::style::Effect::Blink),
+            );
+            if i == (mark.len() - mark.len() % 2 )-1{
+                styled.append_plain(message[mark[i].0+2..].to_string());
+            }else{
+                
+            }
+            
+            
+        }
+    }
+    styled
+}
+
 fn open_upnp_address(addr_us: &str) -> Result<String, String> {
     let (addr, port) = addr_us.split_once(":").unwrap();
     let port = match port.parse::<u16>() {
