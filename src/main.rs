@@ -7,7 +7,7 @@ use cursive::{
         enumset::__internal::EnumSetTypeRepr,
         time::{OffsetDateTime, ext::NumericalDuration, format_description::well_known::Rfc3339},
     },
-    theme::{BaseColor, Color, ColorStyle, ColorType, Style},
+    theme::{BaseColor, Color, ColorStyle, ColorType, Effect, Style},
     utils::{lines::simple::Span, markup::StyledString},
     view::{self, Nameable, Resizable, Scrollable, Selector},
     views::{
@@ -21,16 +21,7 @@ use rand::RngCore;
 use rodio::Decoder;
 
 use std::{
-    cell::RefCell,
-    fs::{self, File, ReadDir},
-    io::{self, BufRead, BufReader, Read, Write},
-    net::TcpListener,
-    os::linux::raw::stat,
-    path::Display,
-    process::Command,
-    sync::{Arc, LazyLock, Mutex, atomic::AtomicBool, mpsc},
-    thread::{self, JoinHandle},
-    time::{self, Duration, Instant},
+    cell::RefCell, clone, fs::{self, File, ReadDir}, io::{self, BufRead, BufReader, Read, Write}, net::TcpListener, os::linux::raw::stat, path::Display, process::Command, sync::{Arc, LazyLock, Mutex, atomic::AtomicBool, mpsc}, thread::{self, JoinHandle}, time::{self, Duration, Instant}
 };
 
 use rsa::{
@@ -128,7 +119,7 @@ fn main() {
             )
             .as_str();
             siv.add_fullscreen_layer(TextView::new(convert_to_style(
-                "message !!asdawd!! asdwadasdaw !!aboba!!".to_string(),
+                "message !!asdawd!! asdwadasdaw !!aboba!! asdfaesasef**assdadA**".to_string(),
             )));
 
             let mut layout = LinearLayout::vertical();
@@ -1189,26 +1180,35 @@ fn ascii() -> String {
     }
     finaline
 }
-//#TODO burn this place down
+//#TODO burn this place down (test it dammit)
 fn convert_to_style(message: String) -> StyledString {
+    let mut cloned = message.clone();
+    cloned = cloned.replace("!!", "##!!$$");
+    cloned = cloned.replace("**", "##!!$$");
+    
     let mut styled = StyledString::new();
     if message.contains("!!") {
-        let mark: Vec<_> = message.match_indices("!!").collect();
-        styled.append_plain(message[0..mark[0].0].to_string());
-        for i in 1..mark.len() - mark.len() % 2 {
-            styled.append_styled(
-                message[mark[i - 1].0 + 2..mark[i].0].to_string(),
-                Style::from(cursive::style::Effect::Blink),
-            );
-            if i == (mark.len() - mark.len() % 2 )-1{
-                styled.append_plain(message[mark[i].0+2..].to_string());
-            }else{
+        let mut mark: Vec<_> = cloned.split("##!!$$").enumerate().collect();
+
+        for i in &mark {
+            if i.0 % 2 == 0 ||i.0 == mark.len()-1  {
+                styled.append_plain(i.1);
+            } else {
+                let mark = message.find(i.1).unwrap()-1;
+                if message.chars().nth(mark).unwrap() == '*'{
+                    styled.append_styled(i.1, Effect::Bold);
+                }else if message.chars().nth(mark).unwrap() == '!'{
+                    styled.append_styled(i.1, Effect::Blink);
+                }else{
+                    styled.append_plain(i.0.to_string());
+                }
                 
             }
-            
-            
         }
     }
+    
+    
+    
     styled
 }
 
