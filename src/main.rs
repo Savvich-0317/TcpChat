@@ -21,7 +21,17 @@ use rand::RngCore;
 use rodio::Decoder;
 
 use std::{
-    cell::RefCell, clone, fs::{self, File, ReadDir}, io::{self, BufRead, BufReader, Read, Write}, net::TcpListener, os::linux::raw::stat, path::Display, process::Command, sync::{Arc, LazyLock, Mutex, atomic::AtomicBool, mpsc}, thread::{self, JoinHandle}, time::{self, Duration, Instant}
+    cell::RefCell,
+    clone,
+    fs::{self, File, ReadDir},
+    io::{self, BufRead, BufReader, Read, Write},
+    net::TcpListener,
+    os::linux::raw::stat,
+    path::Display,
+    process::Command,
+    sync::{Arc, LazyLock, Mutex, atomic::AtomicBool, mpsc},
+    thread::{self, JoinHandle},
+    time::{self, Duration, Instant},
 };
 
 use rsa::{
@@ -119,7 +129,8 @@ fn main() {
             )
             .as_str();
             siv.add_fullscreen_layer(TextView::new(convert_to_style(
-                "message !!asdawd!! asdwadasdaw !!aboba!! asdfaesasef**assdadA**".to_string(),
+                "*bingalius* !!PIPOPIPOPIPO!! message  asdwadasdaw  **bombom**   safasfsadf _Consensus_ ~~Pivo~~ "
+                    .to_string(),
             )));
 
             let mut layout = LinearLayout::vertical();
@@ -1183,32 +1194,46 @@ fn ascii() -> String {
 //#TODO burn this place down (test it dammit)
 fn convert_to_style(message: String) -> StyledString {
     let mut cloned = message.clone();
-    cloned = cloned.replace("!!", "##!!$$");
-    cloned = cloned.replace("**", "##!!$$");
-    
+    cloned = cloned.replace("!!", "??");
+    cloned = cloned.replace("**", "??");
+    cloned = cloned.replace("*", "??");
+    cloned = cloned.replace("~~", "??");
+    cloned = cloned.replace("__", "??");
     let mut styled = StyledString::new();
-    if message.contains("!!") {
-        let mut mark: Vec<_> = cloned.split("##!!$$").enumerate().collect();
+    if cloned.contains("??") {
+        let mut mark: Vec<_> = cloned.split("??").enumerate().collect();
 
         for i in &mark {
-            if i.0 % 2 == 0 ||i.0 == mark.len()-1  {
+            
+            if i.0 % 2 == 0 || i.0 == mark.len() - 1 {
                 styled.append_plain(i.1);
             } else {
-                let mark = message.find(i.1).unwrap()-1;
-                if message.chars().nth(mark).unwrap() == '*'{
-                    styled.append_styled(i.1, Effect::Bold);
-                }else if message.chars().nth(mark).unwrap() == '!'{
+                let mark = message.find(i.1).unwrap() - 1;
+                if message.chars().nth(mark).unwrap() == '*' {
+                    if mark as i32 - 1 >= 0 {
+                        if message.chars().nth(mark - 1).unwrap() == '*' {
+                            styled.append_styled(i.1, Effect::Bold);
+                        } else {
+                            styled.append_styled(i.1, Effect::Italic);
+                        }
+                    }else{
+                        styled.append_styled(i.1, Effect::Italic);
+                    }
+                } else if message.chars().nth(mark).unwrap() == '!' {
                     styled.append_styled(i.1, Effect::Blink);
-                }else{
-                    styled.append_plain(i.0.to_string());
+                }else if message.chars().nth(mark).unwrap() == '~' {
+                    styled.append_styled(i.1, Effect::Strikethrough);
                 }
-                
+                else if message.chars().nth(mark).unwrap() == '~' {
+                    styled.append_styled(i.1, Effect::Underline);
+                }
+                else {
+                    styled.append_plain(i.1.to_string());
+                }
             }
         }
     }
-    
-    
-    
+
     styled
 }
 
