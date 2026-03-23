@@ -129,7 +129,7 @@ fn main() {
             )
             .as_str();
             siv.add_fullscreen_layer(TextView::new(convert_to_style(
-                "*bingalius* !!PIPOPIPOPIPO!! message  asdwadasdaw  **bombom**   safasfsadf _Consensus_ ~~Pivo~~ "
+                "*bingalius* !!PIPOPIPOPIPO!! message asdwadasdaw  **bombom** safasfsadf  ***capusta*** __Consensus__ ~~Pivo~~ "
                     .to_string(),
             )));
 
@@ -685,13 +685,7 @@ fn main() {
                                 .unwrap();
                         } else {
                             let chat = s.call_on_name("Chat", |h: &mut TextView| {
-                                let mut styled = StyledString::new();
-                                styled.append_plain(message.clone().unwrap());
-                                styled.append_styled(
-                                    "    [our secured]\n",
-                                    Style::from(cursive::theme::Effect::Blink),
-                                );
-                                h.append(styled);
+                                h.append(convert_to_style("[our !!secured!!]".to_string()));
                             });
                             send_stream
                                 .clone()
@@ -961,17 +955,17 @@ fn start_thread_listener(
                                         .send(Box::new(move |s| {
                                             s.call_on_name("Chat", |view: &mut TextView| {
                                                 if private_us.is_empty() {
-                                                    view.append(
+                                                    view.append(convert_to_style(
                                                         decrypt_message(mes, private_us)
                                                             .to_string()
                                                             + "    [conversator]\n",
-                                                    );
+                                                    ));
                                                 } else {
-                                                    view.append(
+                                                    view.append(convert_to_style(
                                                         decrypt_message(mes, private_us)
                                                             .to_string()
-                                                            + "    [conversator secured]\n",
-                                                    );
+                                                            + "    [conversator !!secured!!]\n",
+                                                    ));
                                                 }
                                             });
                                         }))
@@ -1195,6 +1189,7 @@ fn ascii() -> String {
 fn convert_to_style(message: String) -> StyledString {
     let mut cloned = message.clone();
     cloned = cloned.replace("!!", "??");
+    cloned = cloned.replace("***", "??");
     cloned = cloned.replace("**", "??");
     cloned = cloned.replace("*", "??");
     cloned = cloned.replace("~~", "??");
@@ -1204,30 +1199,44 @@ fn convert_to_style(message: String) -> StyledString {
         let mut mark: Vec<_> = cloned.split("??").enumerate().collect();
 
         for i in &mark {
-            
             if i.0 % 2 == 0 || i.0 == mark.len() - 1 {
                 styled.append_plain(i.1);
             } else {
                 let mark = message.find(i.1).unwrap() - 1;
                 if message.chars().nth(mark).unwrap() == '*' {
                     if mark as i32 - 1 >= 0 {
-                        if message.chars().nth(mark - 1).unwrap() == '*' {
-                            styled.append_styled(i.1, Effect::Bold);
+                        if mark as i32 - 2 >= 0 {
+                            if message.chars().nth(mark - 1).unwrap() == '*'
+                                && message.chars().nth(mark - 2).unwrap() == '*'
+                            {
+                                styled.append_styled(
+                                    i.1,
+                                    Style::from(Effect::Bold).combine(Effect::Italic),
+                                );
+                            } else {
+                                if message.chars().nth(mark - 1).unwrap() == '*' {
+                                    styled.append_styled(i.1, Effect::Bold);
+                                } else {
+                                    styled.append_styled(i.1, Effect::Italic);
+                                }
+                            }
                         } else {
-                            styled.append_styled(i.1, Effect::Italic);
+                            if message.chars().nth(mark - 1).unwrap() == '*' {
+                                styled.append_styled(i.1, Effect::Bold);
+                            } else {
+                                styled.append_styled(i.1, Effect::Italic);
+                            }
                         }
-                    }else{
+                    } else {
                         styled.append_styled(i.1, Effect::Italic);
                     }
                 } else if message.chars().nth(mark).unwrap() == '!' {
                     styled.append_styled(i.1, Effect::Blink);
-                }else if message.chars().nth(mark).unwrap() == '~' {
+                } else if message.chars().nth(mark).unwrap() == '~' {
                     styled.append_styled(i.1, Effect::Strikethrough);
-                }
-                else if message.chars().nth(mark).unwrap() == '~' {
+                } else if message.chars().nth(mark).unwrap() == '_' {
                     styled.append_styled(i.1, Effect::Underline);
-                }
-                else {
+                } else {
                     styled.append_plain(i.1.to_string());
                 }
             }
