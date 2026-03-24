@@ -1,5 +1,6 @@
 key for remember purposes: -----BEGIN PUBLIC KEY-----
-MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAzRTWmSu2Q+tzxnz9z1cend
+MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAzRTWmSu2Q+tzxnz9z1c
+end
 
 <new conversation on 2026-03-15T23:25:48.928708504+03:00>
 
@@ -64,3 +65,38 @@ asdfadsf // 23:14/decrypted / from convensator
 <new conversation on 2026-03-23T23:44:13.475910718+03:00>
 
 afeasdfe // 23:44/decrypted / from convensator
+
+<new conversation on 2026-03-24T22:39:45.332859208+03:00>
+
+asfaessafdf // 22:39/decrypted / from convensator
+~~agog // 22:40/decrypted / from convensator
+
+<new conversation on 2026-03-24T23:24:22.37539457+03:00>
+
+asefasfeaasfdase // 23:25/decrypted / from convensator
+srddfsgsrdgsd // 23:25/decrypted / from convensator
+rsdfgrssdgf // 23:25/decrypted / from convensator
+
+<new conversation on 2026-03-24T23:27:50.084445531+03:00>
+
+asdfaesfasd // 23:28/decrypted / from convensator
+awdaawdasdsd // 23:28/decrypted / from convensator
+
+<new conversation on 2026-03-24T23:28:54.703556283+03:00>
+
+sdfgsrdg // 23:28/decrypted / from convensator
+sdrsdfgsrsgdfgsdf // 23:29/decrypted / from convensator
+asdfassdfafsea // 23:29/decrypted / from convensator
+sdgrsdfggs // 23:29/decrypted / from convensator
+
+<new conversation on 2026-03-24T23:30:21.141063679+03:00>
+
+asefasdfaesf // 23:30/decrypted / from convensator
+!!abob // 23:30/decrypted / from convensator
+
+<new conversation on 2026-03-24T23:33:10.390385183+03:00>
+
+
+<new conversation on 2026-03-24T23:34:02.944138786+03:00>
+
+!!boba * chad* // 23:34/decrypted / from convensator

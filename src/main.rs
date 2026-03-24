@@ -129,8 +129,7 @@ fn main() {
             )
             .as_str();
             siv.add_fullscreen_layer(TextView::new(convert_to_style(
-                "*bingalius* !!PIPOPIPOPIPO!! message asdwadasdaw  **bombom** safasfsadf  ***capusta*** __Consensus__ ~~Pivo~~ "
-                    .to_string(),
+                " !!PIPOPIPOPIPO!! **bingaliusssss** *sus* ~~PIVO~~ *chungus*".to_string(),
             )));
 
             let mut layout = LinearLayout::vertical();
@@ -675,7 +674,9 @@ fn main() {
 
                         if public_to.clone().is_empty() {
                             let chat = s.call_on_name("Chat", |h: &mut TextView| {
-                                h.append(message.clone().unwrap() + "    [our]\n");
+                                h.append(convert_to_style(
+                                    message.clone().unwrap() + "    [our]\n",
+                                ));
                             });
                             send_stream
                                 .clone()
@@ -685,7 +686,9 @@ fn main() {
                                 .unwrap();
                         } else {
                             let chat = s.call_on_name("Chat", |h: &mut TextView| {
-                                h.append(convert_to_style("[our !!secured!!]".to_string()));
+                                h.append(convert_to_style(
+                                    message.clone().unwrap() + "    [our secured]\n",
+                                ));
                             });
                             send_stream
                                 .clone()
@@ -964,7 +967,7 @@ fn start_thread_listener(
                                                     view.append(convert_to_style(
                                                         decrypt_message(mes, private_us)
                                                             .to_string()
-                                                            + "    [conversator !!secured!!]\n",
+                                                            + "    [conversator secured]\n",
                                                     ));
                                                 }
                                             });
@@ -1185,7 +1188,7 @@ fn ascii() -> String {
     }
     finaline
 }
-//#TODO burn this place down (test it dammit)
+//Probably most shitcoded place in entire tcpchat
 fn convert_to_style(message: String) -> StyledString {
     let mut cloned = message.clone();
     cloned = cloned.replace("!!", "??");
@@ -1199,11 +1202,15 @@ fn convert_to_style(message: String) -> StyledString {
         let mut mark: Vec<_> = cloned.split("??").enumerate().collect();
 
         for i in &mark {
-            if i.0 % 2 == 0 || i.0 == mark.len() - 1 {
+            if i.0 % 2 == 0 || (i.0 == mark.len() - 1) {
                 styled.append_plain(i.1);
             } else {
                 let mark = message.find(i.1).unwrap() - 1;
-                if message.chars().nth(mark).unwrap() == '*' {
+                if message.chars().nth(mark).unwrap()
+                    != message.chars().nth(mark + i.1.len() + 1).unwrap()
+                {
+                    styled.append_plain(i.1.to_string() + "[format error]");
+                } else if message.chars().nth(mark).unwrap() == '*' {
                     if mark as i32 - 1 >= 0 {
                         if mark as i32 - 2 >= 0 {
                             if message.chars().nth(mark - 1).unwrap() == '*'
