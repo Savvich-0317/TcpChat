@@ -7,6 +7,7 @@ use cursive::{
         enumset::__internal::EnumSetTypeRepr,
         time::{OffsetDateTime, ext::NumericalDuration, format_description::well_known::Rfc3339},
     },
+    style,
     theme::{BaseColor, Color, ColorStyle, ColorType, Effect, Style},
     utils::{lines::simple::Span, markup::StyledString},
     view::{self, Nameable, Resizable, Scrollable, Selector},
@@ -17,6 +18,7 @@ use cursive::{
 };
 use easy_upnp::{PortMappingProtocol, UpnpConfig, add_ports};
 use gag::Gag;
+use pulldown_cmark::{Options, Parser, Tag};
 use rand::RngCore;
 use rodio::Decoder;
 
@@ -129,7 +131,7 @@ fn main() {
             )
             .as_str();
             siv.add_fullscreen_layer(TextView::new(convert_to_style(
-                " !!PIPOPIPOPIPO!! **bingaliusssss** *sus* ~~PIVO~~ *chungus*".to_string(),
+                "afdafef **aboba** `asdwadasdwada`".to_string(),
             )));
 
             let mut layout = LinearLayout::vertical();
@@ -1188,68 +1190,37 @@ fn ascii() -> String {
     }
     finaline
 }
-//Probably most shitcoded place in entire tcpchat
+//Actually lgtm
 fn convert_to_style(message: String) -> StyledString {
-    let mut cloned = message.clone();
-    cloned = cloned.replace("!!", "??");
-    cloned = cloned.replace("***", "??");
-    cloned = cloned.replace("**", "??");
-    cloned = cloned.replace("*", "??");
-    cloned = cloned.replace("~~", "??");
-    cloned = cloned.replace("__", "??");
-    let mut styled = StyledString::new();
-    if cloned.contains("??") {
-        let mut mark: Vec<_> = cloned.split("??").enumerate().collect();
+    let mut options = Options::empty();
+    options.insert(Options::ENABLE_STRIKETHROUGH);
+    let parser = Parser::new_ext(message.as_str(), options);
 
-        for i in &mark {
-            if i.0 % 2 == 0 || (i.0 == mark.len() - 1) {
-                styled.append_plain(i.1);
-            } else {
-                let mark = message.find(i.1).unwrap() - 1;
-                if message.chars().nth(mark).unwrap()
-                    != message.chars().nth(mark + i.1.len() + 1).unwrap()
-                {
-                    styled.append_plain(i.1.to_string() + "[format error]");
-                } else if message.chars().nth(mark).unwrap() == '*' {
-                    if mark as i32 - 1 >= 0 {
-                        if mark as i32 - 2 >= 0 {
-                            if message.chars().nth(mark - 1).unwrap() == '*'
-                                && message.chars().nth(mark - 2).unwrap() == '*'
-                            {
-                                styled.append_styled(
-                                    i.1,
-                                    Style::from(Effect::Bold).combine(Effect::Italic),
-                                );
-                            } else {
-                                if message.chars().nth(mark - 1).unwrap() == '*' {
-                                    styled.append_styled(i.1, Effect::Bold);
-                                } else {
-                                    styled.append_styled(i.1, Effect::Italic);
-                                }
-                            }
-                        } else {
-                            if message.chars().nth(mark - 1).unwrap() == '*' {
-                                styled.append_styled(i.1, Effect::Bold);
-                            } else {
-                                styled.append_styled(i.1, Effect::Italic);
-                            }
-                        }
-                    } else {
-                        styled.append_styled(i.1, Effect::Italic);
-                    }
-                } else if message.chars().nth(mark).unwrap() == '!' {
-                    styled.append_styled(i.1, Effect::Blink);
-                } else if message.chars().nth(mark).unwrap() == '~' {
-                    styled.append_styled(i.1, Effect::Strikethrough);
-                } else if message.chars().nth(mark).unwrap() == '_' {
-                    styled.append_styled(i.1, Effect::Underline);
+    let mut styled = StyledString::new();
+    let mut effects = Vec::new();
+
+    for event in parser {
+        match event {
+            pulldown_cmark::Event::Start(Tag::Strong) => effects.push(Effect::Bold),
+            pulldown_cmark::Event::Start(Tag::Emphasis) => effects.push(Effect::Italic),
+            pulldown_cmark::Event::Start(Tag::Strikethrough) => effects.push(Effect::Strikethrough),
+            
+            pulldown_cmark::Event::End(_) => {
+                effects.pop();
+            }
+
+            pulldown_cmark::Event::Text(t) => {
+                if effects.len() == 0 {
+                    styled.append_plain(t.to_string());
                 } else {
-                    styled.append_plain(i.1.to_string());
+                    let style = effects[effects.len() - 1];
+                    styled.append_styled(t.to_string(), style);
                 }
             }
+
+            _ => {}
         }
     }
-
     styled
 }
 
