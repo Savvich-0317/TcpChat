@@ -18,7 +18,7 @@ use cursive::{
 };
 use easy_upnp::{PortMappingProtocol, UpnpConfig, add_ports};
 use gag::Gag;
-use pulldown_cmark::{Options, Parser, Tag};
+use pulldown_cmark::{Options, Parser, Tag, TagEnd};
 use rand::RngCore;
 use rodio::Decoder;
 
@@ -351,6 +351,23 @@ fn main() {
 
                             }
                         }).button("Cancel", |siv| {siv.pop_layer();}));
+                    }))
+                    .child(Button::new("CommonMark formatting",|siv|{
+                        siv.add_layer(Dialog::new().title("CommonMark").content(TextView::new(convert_to_style("
+CommonMark is a strongly defined, highly compatible specification of Markdown!
+
+It is developed by:
+John MacFarlane, jgm@berkeley.edu
+Martin Woodward, martinwoodward@github.com
+Jeff Atwood, jatwood@codinghorror.com
+
+You can use directly in TcpChat messages like this:
+a \\*aristocratic\\* message -> a *aristocratic* message
+a \\*\\*Fat\\*\\* message -> a **Fat** message
+a \\*\\*Striketrough\\*\\* message -> a ~~Striketrough~~ message
+
+You can learn more about it at **https://commonmark.org/**
+".to_string()))).button("Close", |siv|{siv.pop_layer();}));
                     })))
         );
             siv.add_layer(main);
@@ -1191,7 +1208,10 @@ fn ascii() -> String {
     finaline
 }
 //Actually lgtm
-fn convert_to_style(message: String) -> StyledString {
+fn convert_to_style(mut message: String) -> StyledString {
+    if message.starts_with("#") {
+        StyledString::new().append_plain(message[1..].to_string());
+    }
     let mut options = Options::empty();
     options.insert(Options::ENABLE_STRIKETHROUGH);
     let parser = Parser::new_ext(message.as_str(), options);
@@ -1204,7 +1224,15 @@ fn convert_to_style(message: String) -> StyledString {
             pulldown_cmark::Event::Start(Tag::Strong) => effects.push(Effect::Bold),
             pulldown_cmark::Event::Start(Tag::Emphasis) => effects.push(Effect::Italic),
             pulldown_cmark::Event::Start(Tag::Strikethrough) => effects.push(Effect::Strikethrough),
-            
+            pulldown_cmark::Event::SoftBreak => {
+                styled.append_plain("\n");
+            }
+            pulldown_cmark::Event::HardBreak => {
+                styled.append_plain("\n");
+            }
+            pulldown_cmark::Event::End(TagEnd::Paragraph) => {
+                styled.append_plain("\n\n");
+            }
             pulldown_cmark::Event::End(_) => {
                 effects.pop();
             }
