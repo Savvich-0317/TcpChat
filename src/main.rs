@@ -18,6 +18,7 @@ use cursive::{
 };
 use easy_upnp::{PortMappingProtocol, UpnpConfig, add_ports};
 use gag::Gag;
+use notify_rust::{Notification, NotificationHandle};
 use pulldown_cmark::{Options, Parser, Tag, TagEnd};
 use rand::RngCore;
 use rodio::Decoder;
@@ -171,15 +172,14 @@ fn main() {
 
                             let saved = saved.clone();
                             let mut time = "".to_string();
-
-                            if ago > 180 {
+                            if (ago / 60) > 48 {
+                                time = format!("( {} days ago )", ago / 60 / 24);
+                            } else if ago > 180 {
                                 time = format!("( {} hours ago )", ago / 60);
-                            } else if ago == 0 {
-                                time = format!("( now )");
                             } else if ago < 180 {
                                 time = format!("( {} minutes ago )", ago);
-                            } else if ago / 60 > 48 {
-                                time = format!("( {} days ago )", ago / 60 / 24);
+                            } else if ago == 0 {
+                                time = format!("( now )");
                             }
                             s.add_layer(
                                 LinearLayout::vertical()
@@ -693,9 +693,7 @@ You can learn more about it at **https://commonmark.org/**
 
                         if public_to.clone().is_empty() {
                             let chat = s.call_on_name("Chat", |h: &mut TextView| {
-                                h.append(convert_to_style(
-                                    message.clone().unwrap() + "    [our]\n",
-                                ));
+                                h.append(convert_to_style(message.clone().unwrap() + "    [our]"));
                             });
                             send_stream
                                 .clone()
@@ -706,7 +704,7 @@ You can learn more about it at **https://commonmark.org/**
                         } else {
                             let chat = s.call_on_name("Chat", |h: &mut TextView| {
                                 h.append(convert_to_style(
-                                    message.clone().unwrap() + "    [our secured]\n",
+                                    message.clone().unwrap() + "    [our secured]",
                                 ));
                             });
                             send_stream
@@ -969,6 +967,10 @@ fn start_thread_listener(
                         match message {
                             Ok(message) => {
                                 play_random_sound();
+                                Notification::new()
+                                    .summary("New message!")
+                                    .body(format!("A message from {} conversator.",addr_to).as_str())
+                                    .show();
                                 if cb_sink.is_some() {
                                     let mes = message.clone();
                                     let private_us = private_us.clone();
@@ -980,13 +982,13 @@ fn start_thread_listener(
                                                     view.append(convert_to_style(
                                                         decrypt_message(mes, private_us)
                                                             .to_string()
-                                                            + "    [conversator]\n",
+                                                            + "    [conversator]",
                                                     ));
                                                 } else {
                                                     view.append(convert_to_style(
                                                         decrypt_message(mes, private_us)
                                                             .to_string()
-                                                            + "    [conversator secured]\n",
+                                                            + "    [conversator secured]",
                                                     ));
                                                 }
                                             });
