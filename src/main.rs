@@ -59,6 +59,7 @@ mod sender;
 #[derive(serde::Deserialize, serde::Serialize)]
 struct Config {
     addr_us: String,
+    last_addr_to: String,
     encryption: bool,
     keys_auth: bool,
     save_history: bool,
@@ -119,7 +120,7 @@ fn main() {
         let mut addr_us = "".to_string(); //localhost:2121
         let mut addr_to = "".to_string(); //localhost:1212
         let saved_addr_us = Arc::new(saved_config.addr_us.clone());
-
+       let mut saved_config = Arc::new(saved_config);
         let mut choose = "3".to_string();
         if saved_config.tui_interface {
             let mut siv = Cursive::default();
@@ -137,7 +138,15 @@ fn main() {
             )));
 
             let mut layout = LinearLayout::vertical();
+            
             let saved_addr_us = Arc::clone(&saved_addr_us);
+            let mut saved_config = saved_config.clone();
+            if !saved_config.last_addr_to.is_empty(){
+                let saved = saved_config.clone();
+                layout.add_child(Button::new("Jumpstart",move |s|{s.add_layer(Dialog::new().title("Jumpstart").content(TextView::new(format!("Are you sure to jumpstart with:\n{} as our\n{} to",saved.addr_us,saved.last_addr_to))).button("Yes", |s|{
+                    
+                }).button("No", |s|{s.pop_layer();}));}));
+            }
             for file in fs::read_dir("history").unwrap() {
                 let file_name = file.unwrap().file_name().into_string().unwrap();
                 files += format!("{}\n", &file_name).as_str();
@@ -471,7 +480,9 @@ You can learn more about it at **https://commonmark.org/**
                 println!("Type your adress");
                 let mut choose = "".to_string();
                 io::stdin().read_line(&mut choose).unwrap();
-                saved_config.addr_us = choose.trim().to_string();
+                let content = fs::read_to_string("config.toml").unwrap();
+                let mut saved_config: Config = toml::from_str(content.as_str()).unwrap();
+                saved_config.addr_us = choose;
                 let toml_content = toml::to_string(&saved_config).unwrap();
                 fs::write("config.toml", toml_content.as_bytes()).unwrap();
             }
@@ -549,7 +560,7 @@ You can learn more about it at **https://commonmark.org/**
                         std::io::stdin().read_line(&mut addr_us).unwrap();
                         if addr_us.trim().is_empty() {
                             println!("using {} for us", saved_config.addr_us);
-                            addr_us = saved_config.addr_us;
+                            addr_us = saved_config.addr_us.clone();
                         }
                     } else {
                         println!("who are we?");
@@ -652,7 +663,12 @@ You can learn more about it at **https://commonmark.org/**
                     let mut siv = Cursive::default();
 
                     let mut conv = LinearLayout::vertical();
-
+                    let content = fs::read_to_string("config.toml").unwrap();
+                    let mut saved_config: Config = toml::from_str(content.as_str()).unwrap();
+                    saved_config.last_addr_to = addr_to.clone().to_string();
+                    let toml_content = toml::to_string(&saved_config).unwrap();
+                    fs::write("config.toml", toml_content.as_bytes()).unwrap();
+                    
                     let thread_listen = start_thread_listener(
                         addr_us.clone(),
                         private.clone(),
