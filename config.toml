@@ -3,3 +3,4 @@ encryption = true
 keys_auth = true
 save_history = true
 tui_interface = true
+send_notifys = true

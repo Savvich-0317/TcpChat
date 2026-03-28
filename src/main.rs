@@ -63,6 +63,7 @@ struct Config {
     keys_auth: bool,
     save_history: bool,
     tui_interface: bool,
+    send_notifys: bool,
 }
 
 struct ReadedData {
@@ -501,7 +502,7 @@ You can learn more about it at **https://commonmark.org/**
                 if saved_config.tui_interface {
                     thread::spawn(|| {
                         let mut siv = Cursive::default();
-                        siv.add_layer(TextView::new(" ").with_name("stick"));
+                        siv.add_layer(Dialog::new().title("Establishing...").content(TextView::new(" ").with_name("stick")).button("Abort", |siv|siv.quit()));
                         //борровит, клонит, отпускает
                         let cb_sink = { siv.cb_sink().clone() };
                         thread::spawn(move || {
@@ -578,7 +579,7 @@ You can learn more about it at **https://commonmark.org/**
                 //let thread_sender = start_thread_sender(addr_to);
                 println!("Sending handshake");
                 CONNECTED.lock().unwrap().clear();
-                CONNECTED.lock().unwrap().push_str("Sending handshake");
+                CONNECTED.lock().unwrap().push_str("Sending handshake (waiting)");
                 let addr_us_clone = addr_us.clone();
 
                 let handshake_thread = thread::spawn(move || {
@@ -589,9 +590,10 @@ You can learn more about it at **https://commonmark.org/**
                 let mut ping = u128::default();
                 if !addr_to.is_empty() {
                     send_handshake(addr_to, addr_us.clone(), public.clone());
+                    let timer = Instant::now();
                     CONNECTED.lock().unwrap().clear();
                     CONNECTED.lock().unwrap().push_str("sended handshake");
-                    let timer = Instant::now();
+
                     handshake = handshake_thread.join().unwrap();
                     CONNECTED.lock().unwrap().clear();
                     CONNECTED.lock().unwrap().push_str("got handshake");
@@ -600,9 +602,10 @@ You can learn more about it at **https://commonmark.org/**
                     CONNECTED.lock().unwrap().clear();
                     CONNECTED.lock().unwrap().push_str("waiting for handshake");
                     handshake = handshake_thread.join().unwrap();
+                    let timer = Instant::now();
                     CONNECTED.lock().unwrap().clear();
                     CONNECTED.lock().unwrap().push_str("got handshake");
-                    let timer = Instant::now();
+
                     println!("{handshake}");
                     let begin_public = handshake.find("public:").unwrap();
                     let addr_to = &handshake.as_str()[14..begin_public];
@@ -655,6 +658,7 @@ You can learn more about it at **https://commonmark.org/**
                         private.clone(),
                         addr_to.to_string(),
                         saved_config.save_history,
+                        saved_config.send_notifys,
                         Some(siv.cb_sink().clone()),
                     );
 
@@ -827,6 +831,7 @@ You can learn more about it at **https://commonmark.org/**
                         private.clone(),
                         addr_to.to_string(),
                         saved_config.save_history,
+                        saved_config.send_notifys,
                         None,
                     );
 
@@ -946,6 +951,7 @@ fn start_thread_listener(
     private_us: String,
     addr_to: String,
     save_history: bool,
+    send_notifys: bool,
     sink: Option<CbSink>,
 ) -> JoinHandle<()> {
     let thread_listen = thread::spawn(move || {
@@ -967,9 +973,12 @@ fn start_thread_listener(
                         match message {
                             Ok(message) => {
                                 play_random_sound();
+
                                 Notification::new()
                                     .summary("New message!")
-                                    .body(format!("A message from {} conversator.",addr_to).as_str())
+                                    .body(
+                                        format!("A message from {} conversator.", addr_to).as_str(),
+                                    )
                                     .show();
                                 if cb_sink.is_some() {
                                     let mes = message.clone();
