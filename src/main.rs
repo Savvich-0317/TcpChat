@@ -24,17 +24,7 @@ use rand::RngCore;
 use rodio::Decoder;
 
 use std::{
-    cell::RefCell,
-    clone,
-    fs::{self, File, ReadDir},
-    io::{self, BufRead, BufReader, Read, Write},
-    net::TcpListener,
-    os::linux::raw::stat,
-    path::Display,
-    process::Command,
-    sync::{Arc, LazyLock, Mutex, atomic::AtomicBool, mpsc},
-    thread::{self, JoinHandle},
-    time::{self, Duration, Instant},
+    cell::RefCell, clone, fs::{self, File, ReadDir}, io::{self, BufRead, BufReader, Read, Write}, net::TcpListener, os::linux::raw::stat, panic, path::Display, process::Command, sync::{Arc, LazyLock, Mutex, atomic::AtomicBool, mpsc}, thread::{self, JoinHandle}, time::{self, Duration, Instant}
 };
 
 use rsa::{
@@ -143,7 +133,15 @@ fn main() {
             let mut saved_config = saved_config.clone();
             if !saved_config.last_addr_to.is_empty(){
                 let saved = saved_config.clone();
-                layout.add_child(Button::new("Jumpstart",move |s|{s.add_layer(Dialog::new().title("Jumpstart").content(TextView::new(format!("Are you sure to jumpstart with:\n{} as our\n{} to",saved.addr_us,saved.last_addr_to))).button("Yes", |s|{
+                layout.add_child(Button::new("Jumpstart",move |s|{
+                    let saved = saved.clone();
+                    let saved1 = saved.clone();
+                    s.add_layer(Dialog::new().title("Jumpstart").content(TextView::new(format!("Are you sure to jumpstart with:\n{} as our\n{} to",saved.addr_us,saved.last_addr_to))).button("Yes", move |s|{
+                    s.set_user_data(ReadedData {
+                        addr_to: saved1.last_addr_to.clone(),
+                        addr_us: saved1.addr_us.clone(),
+                    });
+                    tui_try_connect(s.cb_sink().clone(), saved1.addr_us.clone());
                     
                 }).button("No", |s|{s.pop_layer();}));}));
             }
@@ -319,7 +317,7 @@ fn main() {
                                                         }
 
                                                     }
-                                                }));}
+                                                }).button("Cancel", |s|{s.pop_layer();}));}
                                 }
                                 let toml_content = toml::to_string(&saved_config).unwrap();
                                 fs::write("config.toml", toml_content.as_bytes()).unwrap();
@@ -1072,7 +1070,8 @@ fn tui_try_connect(cb_sink: CbSink, saved_addr_us: String) {
 
             if addr_to.is_none() {
                 let addr_to = s.user_data::<ReadedData>().unwrap().addr_to.clone();
-                if addr_us.to_owned().unwrap().trim().is_empty() {
+                
+                if addr_us.is_none() || addr_us.clone().unwrap().to_owned().trim().is_empty() {
                     addr_us = Some(saved_addr_us.clone().to_string());
                 }
 

@@ -1,5 +1,5 @@
-addr_us = "0.0.0.0:2424"
-last_addr_to = "0.0.0.0:2424"
+addr_us = "localhost:2424"
+last_addr_to = "localhost:2424"
 encryption = true
 keys_auth = true
 save_history = true

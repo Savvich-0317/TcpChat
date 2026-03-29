@@ -1,0 +1,426 @@
+warning: unused imports: `ColorType`, `Color`, `Event`, `Layer`, `OnEventView`, `ScrollView`, `Selector`, `StackView`, `Style`, `View`, `backend`, `backends::crossterm::crossterm::cursor::MoveDown`, `ext::NumericalDuration`, `lines::simple::Span`, and `style`
+  --> src/main.rs:3:34
+   |
+ 3 |     CbSink, Cursive, CursiveExt, View, backend,
+   |                                  ^^^^  ^^^^^^^
+ 4 |     backends::crossterm::crossterm::cursor::MoveDown,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 5 |     event::{Event, Key},
+   |             ^^^^^
+...
+ 8 |         time::{OffsetDateTime, ext::NumericalDuration, format_description::well_known::Rfc3339},
+   |                                ^^^^^^^^^^^^^^^^^^^^^^
+ 9 |     },
+10 |     style,
+   |     ^^^^^
+11 |     theme::{BaseColor, Color, ColorStyle, ColorType, Effect, Style},
+   |                        ^^^^^              ^^^^^^^^^          ^^^^^
+12 |     utils::{lines::simple::Span, markup::StyledString},
+   |             ^^^^^^^^^^^^^^^^^^^
+13 |     view::{self, Nameable, Resizable, Scrollable, Selector},
+   |                                                   ^^^^^^^^
+14 |     views::{
+15 |         Button, Dialog, DummyView, Layer, LinearLayout, OnEventView, ScrollView, StackView,
+   |                                    ^^^^^                ^^^^^^^^^^^  ^^^^^^^^^^  ^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `NotificationHandle`
+  --> src/main.rs:21:33
+   |
+21 | use notify_rust::{Notification, NotificationHandle};
+   |                                 ^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `ReadDir`, `Read`, `atomic::AtomicBool`, `cell::RefCell`, `clone`, `os::linux::raw::stat`, `path::Display`, and `self`
+  --> src/main.rs:27:5
+   |
+27 |     cell::RefCell, clone, fs::{self, File, ReadDir}, io::{self, BufRead, BufReader, Read, Write}, net::TcpListener, os::linux::raw::stat, panic, path::Display, process::Command, sync::{Arc, LazyLock, Mutex, atomic::AtomicBool, mpsc}, thread::{self, JoinHandle}, time::{self, D...
+   |     ^^^^^^^^^^^^^  ^^^^^                   ^^^^^^^                                  ^^^^                            ^^^^^^^^^^^^^^^^^^^^         ^^^^^^^^^^^^^                                                 ^^^^^^^^^^^^^^^^^^                                            ^^^^
+
+warning: unused import: `digest::consts::U160`
+  --> src/main.rs:35:20
+   |
+35 | use sha2::{Sha256, digest::consts::U160};
+   |                    ^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `File` and `self`
+ --> src/logging.rs:2:16
+  |
+2 |     fs::{self, File},
+  |                ^^^^
+3 |     io::{self, BufRead, BufReader, Read, Write},
+  |          ^^^^
+
+warning: unused import: `Utc`
+ --> src/logging.rs:7:31
+  |
+7 | use chrono::{Local, Timelike, Utc};
+  |                               ^^^
+
+warning: unused import: `Time`
+ --> src/logging.rs:8:48
+  |
+8 | use cursive::reexports::time::{OffsetDateTime, Time, format_description::well_known::Rfc3339};
+  |                                                ^^^^
+
+warning: unused import: `os::unix::io`
+ --> src/sender.rs:4:5
+  |
+4 |     os::unix::io,
+  |     ^^^^^^^^^^^^
+
+warning: use of deprecated struct `std::os::linux::raw::stat`: these type aliases are no longer supported by the standard library, the `libc` crate on crates.io should be used instead for the correct definitions
+  --> src/main.rs:27:133
+   |
+27 |     cell::RefCell, clone, fs::{self, File, ReadDir}, io::{self, BufRead, BufReader, Read, Write}, net::TcpListener, os::linux::raw::stat, panic, path::Display, process::Co...
+   |                                                                                                                                     ^^^^
+   |
+   = note: `#[warn(deprecated)]` on by default
+
+warning: unreachable statement
+    --> src/main.rs:1074:17
+     |
+1073 |                   panic!("{}",addr_to);
+     |                   -------------------- any code following this expression is unreachable
+1074 | /                 if addr_us.is_none() || addr_us.clone().unwrap().to_owned().trim().is_empty() {
+1075 | |                     addr_us = Some(saved_addr_us.clone().to_string());
+1076 | |                 }
+     | |_________________^ unreachable statement
+     |
+     = note: `#[warn(unreachable_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `time`
+  --> src/listen.rs:18:13
+   |
+18 |         let time = format!("{}:{}", Local::now().hour(), Local::now().minute());
+   |             ^^^^ help: if this is intentional, prefix it with an underscore: `_time`
+   |
+   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `chat_log`
+  --> src/logging.rs:49:13
+   |
+49 |     let mut chat_log = match std::fs::exists(format!("history/{addr_to}.txt")) {
+   |             ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_chat_log`
+
+warning: variable does not need to be mutable
+  --> src/logging.rs:49:9
+   |
+49 |     let mut chat_log = match std::fs::exists(format!("history/{addr_to}.txt")) {
+   |         ----^^^^^^^^
+   |         |
+   |         help: remove this `mut`
+   |
+   = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+  --> src/logging.rs:63:17
+   |
+63 |             let mut chat_log = std::fs::File::create(format!("history/{addr_to}.txt"))
+   |                 ----^^^^^^^^
+   |                 |
+   |                 help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> src/logging.rs:104:17
+    |
+104 |             let mut chat_log = std::fs::File::create(format!("history/{addr_to}.txt"))
+    |                 ----^^^^^^^^
+    |                 |
+    |                 help: remove this `mut`
+
+warning: unused variable: `width`
+   --> src/logging.rs:227:13
+    |
+227 |         let width = term_size::dimensions().unwrap().0;
+    |             ^^^^^ help: if this is intentional, prefix it with an underscore: `_width`
+
+warning: variable does not need to be mutable
+   --> src/logging.rs:211:21
+    |
+211 |                 let mut chat_log = std::fs::File::create(format!("history/{addr_to}.txt"))
+    |                     ----^^^^^^^^
+    |                     |
+    |                     help: remove this `mut`
+
+warning: unused variable: `width`
+   --> src/logging.rs:270:25
+    |
+270 |                     let width = term_size::dimensions().unwrap().0;
+    |                         ^^^^^ help: if this is intentional, prefix it with an underscore: `_width`
+
+warning: variable does not need to be mutable
+   --> src/logging.rs:244:21
+    |
+244 |                 let mut chat_log = std::fs::File::create(format!("{addr_to}.txt"))
+    |                     ----^^^^^^^^
+    |                     |
+    |                     help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> src/logging.rs:251:21
+    |
+251 |                 let mut chat_log = std::fs::File::create(format!("{addr_to}.txt"))
+    |                     ----^^^^^^^^
+    |                     |
+    |                     help: remove this `mut`
+
+warning: variable does not need to be mutable
+  --> src/sender.rs:14:13
+   |
+14 |         let mut sender = TcpSender { stream: None };
+   |             ----^^^^^^
+   |             |
+   |             help: remove this `mut`
+
+warning: value assigned to `handshake` is never read
+   --> src/main.rs:598:25
+    |
+598 |                 let mut handshake = String::new();
+    |                         ^^^^^^^^^
+    |
+    = help: maybe it is overwritten before being read?
+    = note: `#[warn(unused_assignments)]` (part of `#[warn(unused)]`) on by default
+
+warning: value assigned to `ping` is never read
+   --> src/main.rs:599:25
+    |
+599 |                 let mut ping = u128::default();
+    |                         ^^^^
+    |
+    = help: maybe it is overwritten before being read?
+
+warning: unused variable: `thread_listen`
+   --> src/main.rs:670:25
+    |
+670 |                     let thread_listen = start_thread_listener(
+    |                         ^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_thread_listen`
+
+warning: unused variable: `thread_listen`
+   --> src/main.rs:843:25
+    |
+843 |                     let thread_listen = start_thread_listener(
+    |                         ^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_thread_listen`
+
+warning: unused variable: `saved`
+   --> src/main.rs:181:33
+    |
+181 | ...                   let saved = saved.clone();
+    |                           ^^^^^ help: if this is intentional, prefix it with an underscore: `_saved`
+
+warning: unused variable: `chat`
+   --> src/main.rs:713:33
+    |
+713 | ...                   let chat = s.call_on_name("Chat", |h: &mut TextView| {
+    |                           ^^^^ help: if this is intentional, prefix it with an underscore: `_chat`
+
+warning: unused variable: `chat`
+   --> src/main.rs:723:33
+    |
+723 | ...                   let chat = s.call_on_name("Chat", |h: &mut TextView| {
+    |                           ^^^^ help: if this is intentional, prefix it with an underscore: `_chat`
+
+warning: unnecessary `unsafe` block
+   --> src/main.rs:519:29
+    |
+519 | ...                   unsafe {
+    |                       ^^^^^^ unnecessary `unsafe` block
+    |
+    = note: `#[warn(unused_unsafe)]` (part of `#[warn(unused)]`) on by default
+
+warning: unnecessary `unsafe` block
+   --> src/main.rs:542:29
+    |
+542 | ...                   unsafe {
+    |                       ^^^^^^ unnecessary `unsafe` block
+
+warning: unnecessary `unsafe` block
+   --> src/main.rs:644:21
+    |
+644 |                     unsafe {
+    |                     ^^^^^^ unnecessary `unsafe` block
+
+warning: variable does not need to be mutable
+  --> src/main.rs:69:13
+   |
+69 |         let mut saved_config: Config = toml::from_str(content.as_str()).unwrap();
+   |             ----^^^^^^^^^^^^
+   |             |
+   |             help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> src/main.rs:113:12
+    |
+113 |        let mut saved_config = Arc::new(saved_config);
+    |            ----^^^^^^^^^^^^
+    |            |
+    |            help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> src/main.rs:133:17
+    |
+133 |             let mut saved_config = saved_config.clone();
+    |                 ----^^^^^^^^^^^^
+    |                 |
+    |                 help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> src/main.rs:490:21
+    |
+490 |                 for mut stream in listener.incoming() {
+    |                     ----^^^^^^
+    |                     |
+    |                     help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> src/main.rs:933:9
+    |
+933 |     let mut sender = TcpSender::new(addr_to.to_string(), 60);
+    |         ----^^^^^^
+    |         |
+    |         help: remove this `mut`
+
+warning: unused variable: `send_notifys`
+   --> src/main.rs:968:5
+    |
+968 |     send_notifys: bool,
+    |     ^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_send_notifys`
+
+warning: variable does not need to be mutable
+    --> src/main.rs:1237:21
+     |
+1237 | fn convert_to_style(mut message: String) -> StyledString {
+     |                     ----^^^^^^^
+     |                     |
+     |                     help: remove this `mut`
+
+warning: unused variable: `addr`
+    --> src/main.rs:1282:10
+     |
+1282 |     let (addr, port) = addr_us.split_once(":").unwrap();
+     |          ^^^^ help: if this is intentional, prefix it with an underscore: `_addr`
+
+warning: variable does not need to be mutable
+    --> src/main.rs:1331:9
+     |
+1331 |     let mut sender = TcpSender::new(addr_to.trim().to_string(), 60); //drops stream if goes out of scope
+     |         ----^^^^^^
+     |         |
+     |         help: remove this `mut`
+
+warning: unused variable: `print_gag`
+    --> src/main.rs:1335:9
+     |
+1335 |     let print_gag = Gag::stderr().unwrap();
+     |         ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_print_gag`
+
+warning: unused variable: `print_gag`
+    --> src/main.rs:1346:13
+     |
+1346 |         let print_gag = Gag::stderr().unwrap();
+     |             ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_print_gag`
+
+warning: function `ascii` is never used
+    --> src/main.rs:1148:4
+     |
+1148 | fn ascii() -> String {
+     |    ^^^^^
+     |
+     = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `play_sound` is never used
+    --> src/main.rs:1334:4
+     |
+1334 | fn play_sound(path: &str) {
+     |    ^^^^^^^^^^
+
+warning: trait `SaveStream` is never used
+   --> src/logging.rs:122:11
+    |
+122 | pub trait SaveStream {
+    |           ^^^^^^^^^^
+
+warning: unused `Result` that must be used
+   --> src/main.rs:601:21
+    |
+601 |                     send_handshake(addr_to, addr_us.clone(), public.clone());
+    |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: this `Result` may be an `Err` variant, which should be handled
+    = note: `#[warn(unused_must_use)]` (part of `#[warn(unused)]`) on by default
+help: use `let _ = ...` to ignore the resulting value
+    |
+601 |                     let _ = send_handshake(addr_to, addr_us.clone(), public.clone());
+    |                     +++++++
+
+warning: unused `Result` that must be used
+   --> src/main.rs:991:33
+    |
+991 | / ...                   Notification::new()
+992 | | ...                       .summary("New message!")
+993 | | ...                       .body(
+994 | | ...                           format!("A message from {} conversator.", addr_to).as_str(),
+995 | | ...                       )
+996 | | ...                       .show();
+    | |_________________________________^
+    |
+    = note: this `Result` may be an `Err` variant, which should be handled
+help: use `let _ = ...` to ignore the resulting value
+    |
+991 |                                 let _ = Notification::new()
+    |                                 +++++++
+
+warning: unused `Result` that must be used
+   --> src/logging.rs:206:17
+    |
+206 |                 chat_log.write_all(buffer.as_bytes());
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: this `Result` may be an `Err` variant, which should be handled
+help: use `let _ = ...` to ignore the resulting value
+    |
+206 |                 let _ = chat_log.write_all(buffer.as_bytes());
+    |                 +++++++
+
+warning: call to `.clone()` on a reference in this situation does nothing
+   --> src/logging.rs:218:33
+    |
+218 |         let private = private_us.clone();
+    |                                 ^^^^^^^^ help: remove this redundant call
+    |
+    = note: the type `str` does not implement `Clone`, so calling `clone` on `&str` copies the reference, which does not do anything and can be removed
+    = note: `#[warn(noop_method_call)]` on by default
+
+warning: call to `.clone()` on a reference in this situation does nothing
+   --> src/logging.rs:220:20
+    |
+220 |         if !private.clone().is_empty() {
+    |                    ^^^^^^^^ help: remove this redundant call
+    |
+    = note: the type `str` does not implement `Clone`, so calling `clone` on `&str` copies the reference, which does not do anything and can be removed
+
+warning: call to `.clone()` on a reference in this situation does nothing
+   --> src/logging.rs:259:33
+    |
+259 |         let private = private_us.clone();
+    |                                 ^^^^^^^^ help: remove this redundant call
+    |
+    = note: the type `str` does not implement `Clone`, so calling `clone` on `&str` copies the reference, which does not do anything and can be removed
+
+warning: call to `.clone()` on a reference in this situation does nothing
+   --> src/logging.rs:263:32
+    |
+263 |                     if !private.clone().is_empty() {
+    |                                ^^^^^^^^ help: remove this redundant call
+    |
+    = note: the type `str` does not implement `Clone`, so calling `clone` on `&str` copies the reference, which does not do anything and can be removed
+
+warning: `TcpChat` (bin "TcpChat") generated 52 warnings (run `cargo fix --bin "TcpChat"` to apply 26 suggestions)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.08s
+     Running `target/debug/TcpChat`
+TcpChat
+There is rsa keys!
+
+thread 'main' (18629) panicked at src/main.rs:1073:17:
+0.0.0.0:1212
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
