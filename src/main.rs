@@ -12,8 +12,8 @@ use cursive::{
     utils::{lines::simple::Span, markup::StyledString},
     view::{self, Nameable, Resizable, Scrollable, Selector},
     views::{
-        Button, Dialog, DummyView, Layer, LinearLayout, OnEventView, ScrollView, StackView,
-        TextArea, TextView,
+        Button, Checkbox, Dialog, DummyView, Layer, LinearLayout, OnEventView, ScrollView,
+        StackView, TextArea, TextView,
     },
 };
 use easy_upnp::{PortMappingProtocol, UpnpConfig, add_ports};
@@ -24,7 +24,18 @@ use rand::RngCore;
 use rodio::Decoder;
 
 use std::{
-    cell::RefCell, clone, fs::{self, File, ReadDir}, io::{self, BufRead, BufReader, Read, Write}, net::TcpListener, os::linux::raw::stat, panic, path::Display, process::Command, sync::{Arc, LazyLock, Mutex, atomic::AtomicBool, mpsc}, thread::{self, JoinHandle}, time::{self, Duration, Instant}
+    cell::RefCell,
+    clone,
+    fs::{self, File, ReadDir},
+    io::{self, BufRead, BufReader, Read, Write},
+    net::TcpListener,
+    os::linux::raw::stat,
+    panic,
+    path::Display,
+    process::Command,
+    sync::{Arc, LazyLock, Mutex, atomic::AtomicBool, mpsc},
+    thread::{self, JoinHandle},
+    time::{self, Duration, Instant},
 };
 
 use rsa::{
@@ -110,7 +121,7 @@ fn main() {
         let mut addr_us = "".to_string(); //localhost:2121
         let mut addr_to = "".to_string(); //localhost:1212
         let saved_addr_us = Arc::new(saved_config.addr_us.clone());
-       let mut saved_config = Arc::new(saved_config);
+        let mut saved_config = Arc::new(saved_config);
         let mut choose = "3".to_string();
         if saved_config.tui_interface {
             let mut siv = Cursive::default();
@@ -128,22 +139,33 @@ fn main() {
             )));
 
             let mut layout = LinearLayout::vertical();
-            
+
             let saved_addr_us = Arc::clone(&saved_addr_us);
             let mut saved_config = saved_config.clone();
-            if !saved_config.last_addr_to.is_empty(){
+            if !saved_config.last_addr_to.is_empty() {
                 let saved = saved_config.clone();
-                layout.add_child(Button::new("Jumpstart",move |s|{
+                layout.add_child(Button::new("Jumpstart", move |s| {
                     let saved = saved.clone();
                     let saved1 = saved.clone();
-                    s.add_layer(Dialog::new().title("Jumpstart").content(TextView::new(format!("Are you sure to jumpstart with:\n{} as our\n{} to",saved.addr_us,saved.last_addr_to))).button("Yes", move |s|{
-                    s.set_user_data(ReadedData {
-                        addr_to: saved1.last_addr_to.clone(),
-                        addr_us: saved1.addr_us.clone(),
-                    });
-                    tui_try_connect(s.cb_sink().clone(), saved1.addr_us.clone());
-                    
-                }).button("No", |s|{s.pop_layer();}));}));
+                    s.add_layer(
+                        Dialog::new()
+                            .title("Jumpstart")
+                            .content(TextView::new(format!(
+                                "Are you sure to jumpstart with:\n{} as our\n{} to",
+                                saved.addr_us, saved.last_addr_to
+                            )))
+                            .button("Yes", move |s| {
+                                s.set_user_data(ReadedData {
+                                    addr_to: saved1.last_addr_to.clone(),
+                                    addr_us: saved1.addr_us.clone(),
+                                });
+                                tui_try_connect(s.cb_sink().clone(), saved1.addr_us.clone());
+                            })
+                            .button("No", |s| {
+                                s.pop_layer();
+                            }),
+                    );
+                }));
             }
             for file in fs::read_dir("history").unwrap() {
                 let file_name = file.unwrap().file_name().into_string().unwrap();
@@ -253,8 +275,9 @@ fn main() {
                         saved_addr_us
                     )));
                 }
-
+                
                 add_layout.add_child(captured_addr_us);
+                add_layout.add_child(LinearLayout::new(cursive::direction::Orientation::Horizontal).child(TextView::new("one sided conv? ")).child(Checkbox::new().with_name("check")));
                 let saved = saved_addr_us.clone();
 
                 s.add_layer(
@@ -379,6 +402,47 @@ You can learn more about it at **https://commonmark.org/**
                     })))
         );
             siv.add_layer(main);
+            siv.add_global_callback(cursive::event::Event::CtrlChar('c'), |s| {
+                s.add_layer(
+                    Dialog::around(TextView::new("Closing conv in ").with_name("timer")).button(
+                        "Cancel",
+                        |s| {
+                            s.pop_layer();
+                        },
+                    ),
+                );
+                let cb_sink = Arc::new(s.cb_sink().clone());
+                thread::spawn(move || {
+                    for i in (0..=50).rev() {
+                        let (tx, rx) = mpsc::channel();
+                        let _ = cb_sink.send(Box::new(move |s: &mut Cursive| {
+                            let exists = match s.find_name::<TextView>("timer") {
+                                None => false,
+                                Some(mut timer) => {
+                                    timer.set_content(format!(
+                                        "Closing in {},{}",
+                                        i / 10 % 10,
+                                        i % 10
+                                    ));
+                                    true
+                                }
+                            };
+                            let _ = tx.send(exists);
+
+                            if i == 0 {
+                                s.quit();
+                            }
+                        }));
+
+                        match rx.recv() {
+                            Ok(true) => (),
+                            _ => break,
+                        }
+
+                        thread::sleep(Duration::from_millis(100));
+                    }
+                });
+            });
             siv.add_global_callback(Key::Esc, |s| {
                 s.add_layer(
                     Dialog::around(TextView::new("Closing conv in ").with_name("timer")).button(
@@ -511,7 +575,12 @@ You can learn more about it at **https://commonmark.org/**
                 if saved_config.tui_interface {
                     thread::spawn(|| {
                         let mut siv = Cursive::default();
-                        siv.add_layer(Dialog::new().title("Establishing...").content(TextView::new(" ").with_name("stick")).button("Abort", |siv|siv.quit()));
+                        siv.add_layer(
+                            Dialog::new()
+                                .title("Establishing...")
+                                .content(TextView::new(" ").with_name("stick"))
+                                .button("Abort", |siv| siv.quit()),
+                        );
                         //борровит, клонит, отпускает
                         let cb_sink = { siv.cb_sink().clone() };
                         thread::spawn(move || {
@@ -588,7 +657,10 @@ You can learn more about it at **https://commonmark.org/**
                 //let thread_sender = start_thread_sender(addr_to);
                 println!("Sending handshake");
                 CONNECTED.lock().unwrap().clear();
-                CONNECTED.lock().unwrap().push_str("Sending handshake (waiting)");
+                CONNECTED
+                    .lock()
+                    .unwrap()
+                    .push_str("Sending handshake (waiting)");
                 let addr_us_clone = addr_us.clone();
 
                 let handshake_thread = thread::spawn(move || {
@@ -666,7 +738,7 @@ You can learn more about it at **https://commonmark.org/**
                     saved_config.last_addr_to = addr_to.clone().to_string();
                     let toml_content = toml::to_string(&saved_config).unwrap();
                     fs::write("config.toml", toml_content.as_bytes()).unwrap();
-                    
+
                     let thread_listen = start_thread_listener(
                         addr_us.clone(),
                         private.clone(),
@@ -828,7 +900,15 @@ You can learn more about it at **https://commonmark.org/**
                                     let addr_to = Arc::clone(&addr_to);
                                     let public_conv = Arc::clone(&public_conv);
                                     move |s| {
-                                        keystamp(addr_to.to_string(), public_conv.to_string());
+                                        if !saved_config.save_history{
+                                            
+                                            s.add_layer(Dialog::new().title("No").content(TextView::new("You got disabled this in config.\nIf you want to save keys, enable logging in config.")).button("Okay", |s|{s.pop_layer();}));
+                                            
+                                            
+                                        }else{
+                                            keystamp(addr_to.to_string(), public_conv.to_string());
+                                        }
+                                        
                                         s.pop_layer();
                                     }
                                 })
@@ -1070,7 +1150,7 @@ fn tui_try_connect(cb_sink: CbSink, saved_addr_us: String) {
 
             if addr_to.is_none() {
                 let addr_to = s.user_data::<ReadedData>().unwrap().addr_to.clone();
-                
+
                 if addr_us.is_none() || addr_us.clone().unwrap().to_owned().trim().is_empty() {
                     addr_us = Some(saved_addr_us.clone().to_string());
                 }

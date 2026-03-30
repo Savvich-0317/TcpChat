@@ -1,3 +1,5 @@
+key for remember purposes: -----BEGIN PUBLIC KEY-----
+MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAzRTWmSu2Q+tzxnz9z1cend
 
 <new conversation on 2026-03-07T22:09:05.927541426+03:00>
 
@@ -36,4 +38,19 @@ aefasefa // 15:14/decrypted / from convensator
 
 
 <new conversation on 2026-03-30T00:32:57.262418072+03:00>
+
+
+<new conversation on 2026-03-30T22:51:32.664612015+03:00>
+
+
+<new conversation on 2026-03-30T22:53:31.579030285+03:00>
+
+
+<new conversation on 2026-03-30T22:54:08.91291797+03:00>
+
+
+<new conversation on 2026-03-30T22:55:34.45069301+03:00>
+
+
+<new conversation on 2026-03-30T22:55:45.634300259+03:00>
 
