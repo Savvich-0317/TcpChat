@@ -275,9 +275,24 @@ fn main() {
                         saved_addr_us
                     )));
                 }
-                
+
                 add_layout.add_child(captured_addr_us);
-                add_layout.add_child(LinearLayout::new(cursive::direction::Orientation::Horizontal).child(TextView::new("one sided conv? ")).child(Checkbox::new().with_name("check")));
+                add_layout.add_child(
+                    LinearLayout::new(cursive::direction::Orientation::Horizontal)
+                        .child(TextView::new("one sided conv? "))
+                        .child(
+                            Checkbox::new()
+                                .on_change(|s, what| {
+                                    s.call_on_name("adress_to", |h: &mut TextArea| {
+                                        h.set_content("");
+                                        if what {
+                                            h.disable();
+                                        }
+                                    });
+                                })
+                                .with_name("check"),
+                        ),
+                );
                 let saved = saved_addr_us.clone();
 
                 s.add_layer(
@@ -657,10 +672,7 @@ You can learn more about it at **https://commonmark.org/**
                 //let thread_sender = start_thread_sender(addr_to);
                 println!("Sending handshake");
                 CONNECTED.lock().unwrap().clear();
-                CONNECTED
-                    .lock()
-                    .unwrap()
-                    .push_str("Sending handshake (waiting)");
+                CONNECTED.lock().unwrap().push_str(addr_to.as_str());
                 let addr_us_clone = addr_us.clone();
 
                 let handshake_thread = thread::spawn(move || {
@@ -669,7 +681,29 @@ You can learn more about it at **https://commonmark.org/**
 
                 let mut handshake = String::new();
                 let mut ping = u128::default();
-                if !addr_to.is_empty() {
+                //seems like cant send handshake properly
+                if addr_to == "ONE SIDED CONV" {
+                    CONNECTED.lock().unwrap().clear();
+                    CONNECTED.lock().unwrap().push_str("waiting for handshake");
+                    handshake = handshake_thread.join().unwrap();
+                    let timer = Instant::now();
+                    CONNECTED.lock().unwrap().clear();
+                    CONNECTED.lock().unwrap().push_str("got handshake");
+
+                    println!("{handshake}");
+                    let begin_public = handshake.find("public:").unwrap();
+                    let addr_to = &handshake.as_str()[14..begin_public];
+                    let public_conv = &handshake.as_str()[begin_public + 8..&handshake.len() - 1]
+                        .replace("\\n", "\n");
+                    println!(
+                        "gotted handshake! from {addr_to}\nand public {}",
+                        public_conv
+                    );
+                    ping = timer.elapsed().as_millis();
+                    send_handshake(addr_to.to_string(), addr_us.clone(), public.clone()).unwrap();
+                    CONNECTED.lock().unwrap().clear();
+                    CONNECTED.lock().unwrap().push_str("sended handshake");
+                } else if !addr_to.is_empty() {
                     send_handshake(addr_to, addr_us.clone(), public.clone());
                     let timer = Instant::now();
                     CONNECTED.lock().unwrap().clear();
@@ -901,14 +935,14 @@ You can learn more about it at **https://commonmark.org/**
                                     let public_conv = Arc::clone(&public_conv);
                                     move |s| {
                                         if !saved_config.save_history{
-                                            
+
                                             s.add_layer(Dialog::new().title("No").content(TextView::new("You got disabled this in config.\nIf you want to save keys, enable logging in config.")).button("Okay", |s|{s.pop_layer();}));
-                                            
-                                            
+
+
                                         }else{
                                             keystamp(addr_to.to_string(), public_conv.to_string());
                                         }
-                                        
+
                                         s.pop_layer();
                                     }
                                 })
