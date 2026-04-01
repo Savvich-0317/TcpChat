@@ -284,7 +284,7 @@ fn main() {
                             Checkbox::new()
                                 .on_change(|s, what| {
                                     s.call_on_name("adress_to", |h: &mut TextArea| {
-                                        h.set_content("");
+                                        h.set_content("ONE SIDED CONV");
                                         if what {
                                             h.disable();
                                         }
@@ -681,7 +681,6 @@ You can learn more about it at **https://commonmark.org/**
 
                 let mut handshake = String::new();
                 let mut ping = u128::default();
-                //seems like cant send handshake properly
                 if addr_to == "ONE SIDED CONV" {
                     CONNECTED.lock().unwrap().clear();
                     CONNECTED.lock().unwrap().push_str("waiting for handshake");
@@ -695,20 +694,25 @@ You can learn more about it at **https://commonmark.org/**
                     let addr_to = &handshake.as_str()[14..begin_public];
                     let public_conv = &handshake.as_str()[begin_public + 8..&handshake.len() - 1]
                         .replace("\\n", "\n");
+                    timestamp(addr_to.clone().to_string());
                     println!(
                         "gotted handshake! from {addr_to}\nand public {}",
                         public_conv
                     );
                     ping = timer.elapsed().as_millis();
+
                     send_handshake(addr_to.to_string(), addr_us.clone(), public.clone()).unwrap();
                     CONNECTED.lock().unwrap().clear();
-                    CONNECTED.lock().unwrap().push_str("sended handshake");
+                    CONNECTED
+                        .lock()
+                        .unwrap()
+                        .push_str(format!("{} {} {}", addr_to, addr_us, public).as_str());
                 } else if !addr_to.is_empty() {
-                    send_handshake(addr_to, addr_us.clone(), public.clone());
+                    send_handshake(addr_to.clone(), addr_us.clone(), public.clone());
                     let timer = Instant::now();
                     CONNECTED.lock().unwrap().clear();
                     CONNECTED.lock().unwrap().push_str("sended handshake");
-
+                    timestamp(addr_to.clone().to_string());
                     handshake = handshake_thread.join().unwrap();
                     CONNECTED.lock().unwrap().clear();
                     CONNECTED.lock().unwrap().push_str("got handshake");
@@ -726,6 +730,7 @@ You can learn more about it at **https://commonmark.org/**
                     let addr_to = &handshake.as_str()[14..begin_public];
                     let public_conv = &handshake.as_str()[begin_public + 8..&handshake.len() - 1]
                         .replace("\\n", "\n");
+                    timestamp(addr_to.clone().to_string());
                     println!(
                         "gotted handshake! from {addr_to}\nand public {}",
                         public_conv
@@ -738,7 +743,10 @@ You can learn more about it at **https://commonmark.org/**
 
                 println!("{handshake}");
                 let begin_public = handshake.find("public:").unwrap();
-                let addr_to = handshake.as_str()[14..begin_public].to_string();
+                if addr_to != "ONE SIDED CONV" {
+                    addr_to = handshake.as_str()[14..begin_public].to_string();
+                }
+
                 let public_conv =
                     handshake.as_str()[begin_public + 8..&handshake.len() - 1].replace("\\n", "\n");
                 println!(
@@ -760,7 +768,7 @@ You can learn more about it at **https://commonmark.org/**
                 }
                 let addr_to = Arc::new(addr_to);
                 let public_conv = Arc::new(public_conv);
-                timestamp(addr_to.clone().to_string());
+
                 println!("to {} us {addr_us}", addr_to.clone());
 
                 if saved_config.tui_interface {
@@ -782,8 +790,6 @@ You can learn more about it at **https://commonmark.org/**
                         Some(siv.cb_sink().clone()),
                     );
 
-                    let send_stream =
-                        Arc::from(Mutex::from(create_sender_tui(addr_to.to_string()).unwrap()));
                     conv.add_child(
                     TextView::new(format!(
                         "from {} to {} conversation. Encryption: our: {} their: {} approx ping: {}",
@@ -806,45 +812,51 @@ You can learn more about it at **https://commonmark.org/**
                     let mut answer = LinearLayout::horizontal();
                     answer.add_child(TextArea::new().with_name("message"));
                     let public_to: Arc<String> = Arc::from(public_conv.to_string().clone());
-                    answer.add_child(Button::new("reply", move |s| {
-                        s.focus_name("message").unwrap();
-                        let message = s.call_on_name("message", |h: &mut TextArea| {
-                            let content = h.get_content().to_string();
-                            h.set_content("");
+                    if *addr_to.clone() != "ONE SIDED CONV".to_string() {
+                        let send_stream =
+                            Arc::from(Mutex::from(create_sender_tui(addr_to.to_string()).unwrap()));
+                        answer.add_child(Button::new("reply", move |s| {
+                            s.focus_name("message").unwrap();
+                            let message = s.call_on_name("message", |h: &mut TextArea| {
+                                let content = h.get_content().to_string();
+                                h.set_content("");
 
-                            content
-                        });
+                                content
+                            });
 
-                        if public_to.clone().is_empty() {
-                            let chat = s.call_on_name("Chat", |h: &mut TextView| {
-                                h.append(convert_to_style(message.clone().unwrap() + "    [our]"));
-                            });
-                            send_stream
-                                .clone()
-                                .lock()
-                                .unwrap()
-                                .reply(message.unwrap() + "\n")
-                                .unwrap();
-                        } else {
-                            let chat = s.call_on_name("Chat", |h: &mut TextView| {
-                                h.append(convert_to_style(
-                                    message.clone().unwrap() + "    [our secured]",
-                                ));
-                            });
-                            send_stream
-                                .clone()
-                                .lock()
-                                .unwrap()
-                                .reply(
-                                    encrypt_message(
-                                        message.unwrap(),
-                                        public_to.clone().to_string(),
-                                    ) + "\n",
-                                )
-                                .unwrap();
-                        }
-                    }));
-                    conv.add_child(answer);
+                            if public_to.clone().is_empty() {
+                                let chat = s.call_on_name("Chat", |h: &mut TextView| {
+                                    h.append(convert_to_style(
+                                        message.clone().unwrap() + "    [our]",
+                                    ));
+                                });
+                                send_stream
+                                    .clone()
+                                    .lock()
+                                    .unwrap()
+                                    .reply(message.unwrap() + "\n")
+                                    .unwrap();
+                            } else {
+                                let chat = s.call_on_name("Chat", |h: &mut TextView| {
+                                    h.append(convert_to_style(
+                                        message.clone().unwrap() + "    [our secured]",
+                                    ));
+                                });
+                                send_stream
+                                    .clone()
+                                    .lock()
+                                    .unwrap()
+                                    .reply(
+                                        encrypt_message(
+                                            message.unwrap(),
+                                            public_to.clone().to_string(),
+                                        ) + "\n",
+                                    )
+                                    .unwrap();
+                            }
+                        }));
+                        conv.add_child(answer);
+                    }
                     siv.pop_layer();
                     siv.pop_layer();
                     siv.add_fullscreen_layer(conv);
@@ -934,14 +946,7 @@ You can learn more about it at **https://commonmark.org/**
                                     let addr_to = Arc::clone(&addr_to);
                                     let public_conv = Arc::clone(&public_conv);
                                     move |s| {
-                                        if !saved_config.save_history{
-
-                                            s.add_layer(Dialog::new().title("No").content(TextView::new("You got disabled this in config.\nIf you want to save keys, enable logging in config.")).button("Okay", |s|{s.pop_layer();}));
-
-
-                                        }else{
-                                            keystamp(addr_to.to_string(), public_conv.to_string());
-                                        }
+                                        keystamp(addr_to.to_string(), public_conv.to_string());
 
                                         s.pop_layer();
                                     }
