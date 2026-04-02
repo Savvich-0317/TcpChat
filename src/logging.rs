@@ -6,6 +6,7 @@ use std::{
 
 use chrono::{Local, Timelike, Utc};
 use cursive::reexports::time::{OffsetDateTime, Time, format_description::well_known::Rfc3339};
+use directories::ProjectDirs;
 
 use crate::decrypt_message;
 pub fn get_key(addr_to: String) -> String {
@@ -16,6 +17,24 @@ pub fn get_key(addr_to: String) -> String {
             .to_string()
     } else {
         "".to_string()
+    }
+}
+pub fn init() {
+    if let Some(proj_dirs) = ProjectDirs::from("", "Savvich", "TcpChat") {
+        if let Ok(false) = fs::exists(proj_dirs.config_dir()) {
+            fs::create_dir(proj_dirs.config_dir()).unwrap();
+            println!("created config {}", proj_dirs.config_dir().to_str().unwrap());
+        }
+        if let Ok(false) = fs::exists(proj_dirs.state_dir().unwrap()) {
+            fs::create_dir(proj_dirs.state_dir().unwrap()).unwrap();
+            println!("created state history  {}", proj_dirs.state_dir().unwrap().to_str().unwrap());
+        }
+        
+        if let Ok(false) = fs::exists(proj_dirs.state_dir().unwrap()) {
+            fs::create_dir(proj_dirs.state_dir().unwrap()).unwrap();
+            println!("created state history  {}", proj_dirs.state_dir().unwrap().to_str().unwrap());
+        }
+        
     }
 }
 pub fn last_com(addr_to: String) -> String {
@@ -39,7 +58,6 @@ pub fn is_familliar_key(addr_to: String, public: String) -> bool {
             .unwrap()
             .starts_with(format!("key for remember purposes: {}\nend", public).as_str())
     {
-        
         false
     } else {
         true

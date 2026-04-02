@@ -1,20 +1,12 @@
 use base64::{Engine as _, engine::general_purpose};
 use cursive::{
-    CbSink, Cursive, CursiveExt, View, backend,
-    backends::crossterm::crossterm::cursor::MoveDown,
-    event::{Event, Key},
-    reexports::{
+    CbSink, Cursive, CursiveExt, View, backend, backends::crossterm::crossterm::cursor::MoveDown, event::{Event, Key}, logger::init, reexports::{
         enumset::__internal::EnumSetTypeRepr,
         time::{OffsetDateTime, ext::NumericalDuration, format_description::well_known::Rfc3339},
-    },
-    style,
-    theme::{BaseColor, Color, ColorStyle, ColorType, Effect, Style},
-    utils::{lines::simple::Span, markup::StyledString},
-    view::{self, Nameable, Resizable, Scrollable, Selector},
-    views::{
+    }, style, theme::{BaseColor, Color, ColorStyle, ColorType, Effect, Style}, utils::{lines::simple::Span, markup::StyledString}, view::{self, Nameable, Resizable, Scrollable, Selector}, views::{
         Button, Checkbox, Dialog, DummyView, Layer, LinearLayout, OnEventView, ScrollView,
         StackView, TextArea, TextView,
-    },
+    }
 };
 use easy_upnp::{PortMappingProtocol, UpnpConfig, add_ports};
 use gag::Gag;
@@ -73,6 +65,7 @@ struct ReadedData {
     addr_to: String,
 }
 fn main() {
+logging::init();
     loop {
         println!("TcpChat");
 
