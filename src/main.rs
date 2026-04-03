@@ -8,6 +8,7 @@ use cursive::{
         StackView, TextArea, TextView,
     }
 };
+use directories::ProjectDirs;
 use easy_upnp::{PortMappingProtocol, UpnpConfig, add_ports};
 use gag::Gag;
 use notify_rust::{Notification, NotificationHandle};
@@ -66,6 +67,11 @@ struct ReadedData {
 }
 fn main() {
 logging::init();
+let projectdir = ProjectDirs::from("", "Savvich", "TcpChat").unwrap();
+//unwrap or else here
+let state = projectdir.state_dir().unwrap().to_str().unwrap().to_string();
+
+
     loop {
         println!("TcpChat");
 
@@ -81,6 +87,7 @@ logging::init();
         }
 
         let mut public = "".to_string();
+        
         static CONNECTED: LazyLock<Mutex<String>> = LazyLock::new(|| Mutex::new(String::new()));
         match fs::read_to_string("keys/rsa_key_public.pem") {
             Ok(text) => public = text,
@@ -164,6 +171,7 @@ logging::init();
                 let file_name = file.unwrap().file_name().into_string().unwrap();
                 files += format!("{}\n", &file_name).as_str();
                 let saved = Arc::clone(&saved_addr_us);
+                let state = state.clone();
                 layout.add_child(
                     Button::new(
                         file_name.clone()[..file_name.clone().len() - 4].to_string(),
@@ -187,7 +195,7 @@ logging::init();
 
                             let ago = (OffsetDateTime::now_utc()
                                 - OffsetDateTime::parse(
-                                    &last_com(addr_to.clone()).as_str(),
+                                    &last_com(state.clone(),addr_to.clone()).as_str(),
                                     &Rfc3339,
                                 )
                                 .unwrap_or_else(|_| OffsetDateTime::now_utc()))
@@ -209,7 +217,7 @@ logging::init();
                                     .child(TextView::new(format!(
                                         "Last communication with {} is on: {} {}",
                                         addr_to,
-                                        last_com(addr_to.clone()),
+                                        last_com(state.clone(),addr_to.clone()),
                                         time
                                     )))
                                     .child(
@@ -665,7 +673,7 @@ You can learn more about it at **https://commonmark.org/**
                 //let thread_sender = start_thread_sender(addr_to);
                 println!("Sending handshake");
                 CONNECTED.lock().unwrap().clear();
-                CONNECTED.lock().unwrap().push_str(addr_to.as_str());
+                CONNECTED.lock().unwrap().push_str("Sending handshake");
                 let addr_us_clone = addr_us.clone();
 
                 let handshake_thread = thread::spawn(move || {
@@ -687,7 +695,7 @@ You can learn more about it at **https://commonmark.org/**
                     let addr_to = &handshake.as_str()[14..begin_public];
                     let public_conv = &handshake.as_str()[begin_public + 8..&handshake.len() - 1]
                         .replace("\\n", "\n");
-                    timestamp(addr_to.clone().to_string());
+                    timestamp(state.clone(),addr_to.clone().to_string());
                     println!(
                         "gotted handshake! from {addr_to}\nand public {}",
                         public_conv
@@ -705,7 +713,7 @@ You can learn more about it at **https://commonmark.org/**
                     let timer = Instant::now();
                     CONNECTED.lock().unwrap().clear();
                     CONNECTED.lock().unwrap().push_str("sended handshake");
-                    timestamp(addr_to.clone().to_string());
+                    timestamp(state.clone(),addr_to.clone().to_string());
                     handshake = handshake_thread.join().unwrap();
                     CONNECTED.lock().unwrap().clear();
                     CONNECTED.lock().unwrap().push_str("got handshake");
@@ -723,7 +731,7 @@ You can learn more about it at **https://commonmark.org/**
                     let addr_to = &handshake.as_str()[14..begin_public];
                     let public_conv = &handshake.as_str()[begin_public + 8..&handshake.len() - 1]
                         .replace("\\n", "\n");
-                    timestamp(addr_to.clone().to_string());
+                    timestamp(state.clone(),addr_to.clone().to_string());
                     println!(
                         "gotted handshake! from {addr_to}\nand public {}",
                         public_conv
@@ -755,7 +763,7 @@ You can learn more about it at **https://commonmark.org/**
                         }
                     }
                 }
-                let mut safe = is_familliar_key(addr_to.to_string(), public_conv.to_string());
+                let mut safe = is_familliar_key(state.clone(),addr_to.to_string(), public_conv.to_string());
                 if !saved_config.keys_auth {
                     safe = true;
                 }
@@ -781,6 +789,7 @@ You can learn more about it at **https://commonmark.org/**
                         saved_config.save_history,
                         saved_config.send_notifys,
                         Some(siv.cb_sink().clone()),
+                        state.clone()
                     );
 
                     conv.add_child(
@@ -894,7 +903,7 @@ You can learn more about it at **https://commonmark.org/**
                     });
                     if !safe {
                         let mut message = StyledString::new();
-                        let previous = get_key(addr_to.clone().to_string());
+                        let previous = get_key(state.clone(),addr_to.clone().to_string());
                         let now = public_conv[..90].to_string();
                         if previous.is_empty() {
                             message.append_plain(
@@ -938,8 +947,9 @@ You can learn more about it at **https://commonmark.org/**
                                 .button("Remember new key", {
                                     let addr_to = Arc::clone(&addr_to);
                                     let public_conv = Arc::clone(&public_conv);
+                                    let state = state.clone();
                                     move |s| {
-                                        keystamp(addr_to.to_string(), public_conv.to_string());
+                                        keystamp(state.clone(),addr_to.to_string(), public_conv.to_string());
 
                                         s.pop_layer();
                                     }
@@ -951,7 +961,7 @@ You can learn more about it at **https://commonmark.org/**
                     }
                     siv.run();
                 } else {
-                    timestamp(addr_to.to_string());
+                    timestamp(state.clone(),addr_to.to_string());
                     let thread_listen = start_thread_listener(
                         addr_us.clone(),
                         private.clone(),
@@ -959,6 +969,7 @@ You can learn more about it at **https://commonmark.org/**
                         saved_config.save_history,
                         saved_config.send_notifys,
                         None,
+                        state.clone()
                     );
 
                     if !safe {
@@ -973,7 +984,7 @@ choose: "
                         let mut choose = String::new();
                         io::stdin().read_line(&mut choose).unwrap();
                         if choose.trim() == "y" {
-                            keystamp(addr_to.clone().to_string(), public_conv.clone().to_string());
+                            keystamp(state.clone(),addr_to.clone().to_string(), public_conv.clone().to_string());
                         } else {
                             continue;
                         }
@@ -1079,6 +1090,7 @@ fn start_thread_listener(
     save_history: bool,
     send_notifys: bool,
     sink: Option<CbSink>,
+    state: String
 ) -> JoinHandle<()> {
     let thread_listen = thread::spawn(move || {
         let listener = TcpListener::bind(addr_us.clone());
@@ -1087,7 +1099,7 @@ fn start_thread_listener(
                 for stream in listener.unwrap().incoming() {
                     let cb_sink = sink.clone();
                     println!("Got stream connection");
-                    if let Err(err) = print_log(addr_to.as_str()) {
+                    if let Err(err) = print_log(state.clone(),addr_to.as_str()) {
                         println!("{err}");
                     } else {
                         println!("from previous conversation with this adress");
@@ -1133,7 +1145,7 @@ fn start_thread_listener(
                                     message.print_message(private_us.clone());
                                 }
                                 if save_history {
-                                    message.log_message(addr_to.as_str(), private_us.as_str());
+                                    message.log_message(state.clone(),addr_to.as_str(), private_us.as_str());
                                 }
                             }
                             Err(_) => break,
