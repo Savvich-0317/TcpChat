@@ -9,6 +9,12 @@ use cursive::reexports::time::{OffsetDateTime, Time, format_description::well_kn
 use directories::ProjectDirs;
 
 use crate::decrypt_message;
+pub fn create_config(path:String){
+    
+    if fs::File::create_new(format!("{path}/config.toml")).is_ok(){
+        fs::write(format!("{path}/config.toml"), "addr_us = \"localhost:2424\"\nlast_addr_to = \"localhost:2424\"\nencryption = true\nkeys_auth = true\nsave_history = false\ntui_interface = true\nsend_notifys = true");
+    }
+}
 pub fn get_key(xdg_state: String,addr_to: String) -> String {
     let start = "key for remember purposes: -----BEGIN PUBLIC KEY-----\n";
     let content = fs::read_to_string(format!("history/{addr_to}.txt")).unwrap();

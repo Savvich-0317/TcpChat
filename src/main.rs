@@ -1,12 +1,21 @@
 use base64::{Engine as _, engine::general_purpose};
 use cursive::{
-    CbSink, Cursive, CursiveExt, View, backend, backends::crossterm::crossterm::cursor::MoveDown, event::{Event, Key}, logger::init, reexports::{
+    CbSink, Cursive, CursiveExt, View, backend,
+    backends::crossterm::crossterm::cursor::MoveDown,
+    event::{Event, Key},
+    logger::init,
+    reexports::{
         enumset::__internal::EnumSetTypeRepr,
         time::{OffsetDateTime, ext::NumericalDuration, format_description::well_known::Rfc3339},
-    }, style, theme::{BaseColor, Color, ColorStyle, ColorType, Effect, Style}, utils::{lines::simple::Span, markup::StyledString}, view::{self, Nameable, Resizable, Scrollable, Selector}, views::{
+    },
+    style,
+    theme::{BaseColor, Color, ColorStyle, ColorType, Effect, Style},
+    utils::{lines::simple::Span, markup::StyledString},
+    view::{self, Nameable, Resizable, Scrollable, Selector},
+    views::{
         Button, Checkbox, Dialog, DummyView, Layer, LinearLayout, OnEventView, ScrollView,
         StackView, TextArea, TextView,
-    }
+    },
 };
 use directories::ProjectDirs;
 use easy_upnp::{PortMappingProtocol, UpnpConfig, add_ports};
@@ -41,8 +50,7 @@ use sha2::{Sha256, digest::consts::U160};
 use crate::{
     listen::{GetHandshake, PrintStream},
     logging::{
-        LogMessage, PrintMessage, get_key, is_familliar_key, keystamp, last_com, print_log,
-        timestamp,
+        LogMessage, PrintMessage, create_config, get_key, is_familliar_key, keystamp, last_com, print_log, timestamp
     },
     sender::TcpSender,
 };
@@ -66,16 +74,24 @@ struct ReadedData {
     addr_to: String,
 }
 fn main() {
-logging::init();
-let projectdir = ProjectDirs::from("", "Savvich", "TcpChat").unwrap();
-//unwrap or else here
-let state = projectdir.state_dir().unwrap().to_str().unwrap().to_string();
-
+    logging::init();
+    let projectdir = ProjectDirs::from("", "Savvich", "TcpChat").unwrap();
+    //unwrap or else here
+    let state = projectdir
+        .state_dir()
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .to_string();
+    let config_dir = projectdir.config_dir().to_str().unwrap().to_string();
 
     loop {
+    let path = format!("{config_dir}/config.toml");
+    //fs::File::create(format!("{path}/config.toml")).unwrap();
         println!("TcpChat");
-
-        let content = fs::read_to_string("config.toml").unwrap();
+        //create_config(format!("{config_dir}/config.toml"));
+        let content = fs::read_to_string(format!("{config_dir}/config.toml")).unwrap();
+        
         let mut saved_config: Config = toml::from_str(content.as_str()).unwrap();
 
         let mut private = "".to_string();
@@ -87,7 +103,7 @@ let state = projectdir.state_dir().unwrap().to_str().unwrap().to_string();
         }
 
         let mut public = "".to_string();
-        
+
         static CONNECTED: LazyLock<Mutex<String>> = LazyLock::new(|| Mutex::new(String::new()));
         match fs::read_to_string("keys/rsa_key_public.pem") {
             Ok(text) => public = text,
@@ -167,7 +183,7 @@ let state = projectdir.state_dir().unwrap().to_str().unwrap().to_string();
                     );
                 }));
             }
-            for file in fs::read_dir("history").unwrap() {
+            for file in fs::read_dir(format!("{state}/history")).unwrap() {
                 let file_name = file.unwrap().file_name().into_string().unwrap();
                 files += format!("{}\n", &file_name).as_str();
                 let saved = Arc::clone(&saved_addr_us);
@@ -195,7 +211,7 @@ let state = projectdir.state_dir().unwrap().to_str().unwrap().to_string();
 
                             let ago = (OffsetDateTime::now_utc()
                                 - OffsetDateTime::parse(
-                                    &last_com(state.clone(),addr_to.clone()).as_str(),
+                                    &last_com(state.clone(), addr_to.clone()).as_str(),
                                     &Rfc3339,
                                 )
                                 .unwrap_or_else(|_| OffsetDateTime::now_utc()))
@@ -217,7 +233,7 @@ let state = projectdir.state_dir().unwrap().to_str().unwrap().to_string();
                                     .child(TextView::new(format!(
                                         "Last communication with {} is on: {} {}",
                                         addr_to,
-                                        last_com(state.clone(),addr_to.clone()),
+                                        last_com(state.clone(), addr_to.clone()),
                                         time
                                     )))
                                     .child(
@@ -695,7 +711,7 @@ You can learn more about it at **https://commonmark.org/**
                     let addr_to = &handshake.as_str()[14..begin_public];
                     let public_conv = &handshake.as_str()[begin_public + 8..&handshake.len() - 1]
                         .replace("\\n", "\n");
-                    timestamp(state.clone(),addr_to.clone().to_string());
+                    timestamp(state.clone(), addr_to.clone().to_string());
                     println!(
                         "gotted handshake! from {addr_to}\nand public {}",
                         public_conv
@@ -713,7 +729,7 @@ You can learn more about it at **https://commonmark.org/**
                     let timer = Instant::now();
                     CONNECTED.lock().unwrap().clear();
                     CONNECTED.lock().unwrap().push_str("sended handshake");
-                    timestamp(state.clone(),addr_to.clone().to_string());
+                    timestamp(state.clone(), addr_to.clone().to_string());
                     handshake = handshake_thread.join().unwrap();
                     CONNECTED.lock().unwrap().clear();
                     CONNECTED.lock().unwrap().push_str("got handshake");
@@ -731,7 +747,7 @@ You can learn more about it at **https://commonmark.org/**
                     let addr_to = &handshake.as_str()[14..begin_public];
                     let public_conv = &handshake.as_str()[begin_public + 8..&handshake.len() - 1]
                         .replace("\\n", "\n");
-                    timestamp(state.clone(),addr_to.clone().to_string());
+                    timestamp(state.clone(), addr_to.clone().to_string());
                     println!(
                         "gotted handshake! from {addr_to}\nand public {}",
                         public_conv
@@ -763,7 +779,8 @@ You can learn more about it at **https://commonmark.org/**
                         }
                     }
                 }
-                let mut safe = is_familliar_key(state.clone(),addr_to.to_string(), public_conv.to_string());
+                let mut safe =
+                    is_familliar_key(state.clone(), addr_to.to_string(), public_conv.to_string());
                 if !saved_config.keys_auth {
                     safe = true;
                 }
@@ -789,7 +806,7 @@ You can learn more about it at **https://commonmark.org/**
                         saved_config.save_history,
                         saved_config.send_notifys,
                         Some(siv.cb_sink().clone()),
-                        state.clone()
+                        state.clone(),
                     );
 
                     conv.add_child(
@@ -903,7 +920,7 @@ You can learn more about it at **https://commonmark.org/**
                     });
                     if !safe {
                         let mut message = StyledString::new();
-                        let previous = get_key(state.clone(),addr_to.clone().to_string());
+                        let previous = get_key(state.clone(), addr_to.clone().to_string());
                         let now = public_conv[..90].to_string();
                         if previous.is_empty() {
                             message.append_plain(
@@ -949,7 +966,11 @@ You can learn more about it at **https://commonmark.org/**
                                     let public_conv = Arc::clone(&public_conv);
                                     let state = state.clone();
                                     move |s| {
-                                        keystamp(state.clone(),addr_to.to_string(), public_conv.to_string());
+                                        keystamp(
+                                            state.clone(),
+                                            addr_to.to_string(),
+                                            public_conv.to_string(),
+                                        );
 
                                         s.pop_layer();
                                     }
@@ -961,7 +982,7 @@ You can learn more about it at **https://commonmark.org/**
                     }
                     siv.run();
                 } else {
-                    timestamp(state.clone(),addr_to.to_string());
+                    timestamp(state.clone(), addr_to.to_string());
                     let thread_listen = start_thread_listener(
                         addr_us.clone(),
                         private.clone(),
@@ -969,7 +990,7 @@ You can learn more about it at **https://commonmark.org/**
                         saved_config.save_history,
                         saved_config.send_notifys,
                         None,
-                        state.clone()
+                        state.clone(),
                     );
 
                     if !safe {
@@ -984,7 +1005,11 @@ choose: "
                         let mut choose = String::new();
                         io::stdin().read_line(&mut choose).unwrap();
                         if choose.trim() == "y" {
-                            keystamp(state.clone(),addr_to.clone().to_string(), public_conv.clone().to_string());
+                            keystamp(
+                                state.clone(),
+                                addr_to.clone().to_string(),
+                                public_conv.clone().to_string(),
+                            );
                         } else {
                             continue;
                         }
@@ -1090,7 +1115,7 @@ fn start_thread_listener(
     save_history: bool,
     send_notifys: bool,
     sink: Option<CbSink>,
-    state: String
+    state: String,
 ) -> JoinHandle<()> {
     let thread_listen = thread::spawn(move || {
         let listener = TcpListener::bind(addr_us.clone());
@@ -1099,7 +1124,7 @@ fn start_thread_listener(
                 for stream in listener.unwrap().incoming() {
                     let cb_sink = sink.clone();
                     println!("Got stream connection");
-                    if let Err(err) = print_log(state.clone(),addr_to.as_str()) {
+                    if let Err(err) = print_log(state.clone(), addr_to.as_str()) {
                         println!("{err}");
                     } else {
                         println!("from previous conversation with this adress");
@@ -1145,7 +1170,11 @@ fn start_thread_listener(
                                     message.print_message(private_us.clone());
                                 }
                                 if save_history {
-                                    message.log_message(state.clone(),addr_to.as_str(), private_us.as_str());
+                                    message.log_message(
+                                        state.clone(),
+                                        addr_to.as_str(),
+                                        private_us.as_str(),
+                                    );
                                 }
                             }
                             Err(_) => break,
