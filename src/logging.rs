@@ -9,13 +9,14 @@ use cursive::reexports::time::{OffsetDateTime, Time, format_description::well_kn
 use directories::ProjectDirs;
 
 use crate::decrypt_message;
-pub fn create_config(path:String){
-    
-    if fs::File::create_new(format!("{path}/config.toml")).is_ok(){
-        fs::write(format!("{path}/config.toml"), "addr_us = \"localhost:2424\"\nlast_addr_to = \"localhost:2424\"\nencryption = true\nkeys_auth = true\nsave_history = false\ntui_interface = true\nsend_notifys = true");
+pub fn create_config(path: String) {
+    if !fs::exists(format!("{path}/config.toml")).is_ok(){
+        fs::File::create_new(format!("{path}/config.toml")).unwrap();
+        fs::write(format!("{path}/config.toml"), "addr_us = \"localhost:2424\"\nlast_addr_to = \"localhost:2424\"\nencryption = true\nkeys_auth = true\nsave_history = false\ntui_interface = true\nsend_notifys = true").unwrap();
+
     }
-}
-pub fn get_key(xdg_state: String,addr_to: String) -> String {
+    }
+pub fn get_key(xdg_state: String, addr_to: String) -> String {
     let start = "key for remember purposes: -----BEGIN PUBLIC KEY-----\n";
     let content = fs::read_to_string(format!("history/{addr_to}.txt")).unwrap();
     if content.starts_with(start) {
@@ -27,20 +28,17 @@ pub fn get_key(xdg_state: String,addr_to: String) -> String {
 }
 pub fn init() {
     if let Some(proj_dirs) = ProjectDirs::from("", "Savvich", "TcpChat") {
-        if let Ok(false) = fs::exists(proj_dirs.config_dir()) {
-            fs::create_dir(proj_dirs.config_dir()).unwrap();
-            println!("created config {}", proj_dirs.config_dir().to_str().unwrap());
-        }
+        
         if let Ok(false) = fs::exists(proj_dirs.state_dir().unwrap()) {
             fs::create_dir(proj_dirs.state_dir().unwrap()).unwrap();
-            println!("created state history  {}", proj_dirs.state_dir().unwrap().to_str().unwrap());
+            println!(
+                "created state history  {}",
+                proj_dirs.state_dir().unwrap().to_str().unwrap()
+            );
         }
-        
-        
     }
 }
-pub fn last_com(xdg_state: String,addr_to: String) -> String {
-    
+pub fn last_com(xdg_state: String, addr_to: String) -> String {
     let content = fs::read_to_string(format!("{xdg_state}/history/{}.txt", addr_to));
     if content.is_err() {
         "never".to_string()
@@ -54,7 +52,7 @@ pub fn last_com(xdg_state: String,addr_to: String) -> String {
         }
     }
 }
-pub fn is_familliar_key(xdg_state: String,addr_to: String, public: String) -> bool {
+pub fn is_familliar_key(xdg_state: String, addr_to: String, public: String) -> bool {
     let public = public[0..90].to_string();
     if fs::read_to_string(format!("{xdg_state}/history/{addr_to}.txt")).is_err()
         || !fs::read_to_string(format!("{xdg_state}/history/{addr_to}.txt"))
@@ -66,7 +64,7 @@ pub fn is_familliar_key(xdg_state: String,addr_to: String, public: String) -> bo
         true
     }
 }
-pub fn keystamp(xdg_state: String,addr_to: String, public: String) {
+pub fn keystamp(xdg_state: String, addr_to: String, public: String) {
     let mut chat_log = match std::fs::exists(format!("{xdg_state}/history/{addr_to}.txt")) {
         Ok(true) => {
             let mut buffer = "".to_string();
@@ -107,7 +105,7 @@ pub fn keystamp(xdg_state: String,addr_to: String, public: String) {
         }
     }
 }
-pub fn timestamp(xdg_state: String,addr_to: String) {
+pub fn timestamp(xdg_state: String, addr_to: String) {
     let mut chat_log = match std::fs::exists(format!("{xdg_state}/history/{addr_to}.txt")) {
         Ok(true) => {
             let mut buffer = "".to_string();
@@ -123,7 +121,9 @@ pub fn timestamp(xdg_state: String,addr_to: String) {
 
         _ => {
             let mut chat_log = std::fs::File::create(format!("{xdg_state}/history/{addr_to}.txt"))
-                .expect(format!("failed to create a file {xdg_state}/history/{addr_to}.txt").as_str());
+                .expect(
+                    format!("failed to create a file {xdg_state}/history/{addr_to}.txt").as_str(),
+                );
             chat_log
         }
     };
@@ -141,10 +141,10 @@ pub fn timestamp(xdg_state: String,addr_to: String) {
         .unwrap();
 }
 pub trait SaveStream {
-    fn save_stream(&self,xdg_state: String, addr_to: &str, private_us: &str);
+    fn save_stream(&self, xdg_state: String, addr_to: &str, private_us: &str);
 }
 pub trait LogMessage {
-    fn log_message(&self,xdg_state: String, addr_to: &str, private_us: &str);
+    fn log_message(&self, xdg_state: String, addr_to: &str, private_us: &str);
 }
 pub trait PrintMessage {
     fn print_message(&self, private_us: String);
@@ -181,7 +181,7 @@ impl PrintMessage for String {
     }
 }
 
-pub fn print_log(xdg_state: String,addr_to: &str) -> Result<(), &str> {
+pub fn print_log(xdg_state: String, addr_to: &str) -> Result<(), &str> {
     match std::fs::exists(format!("{xdg_state}/history/{addr_to}.txt")) {
         Ok(true) => {
             let mut buffer = "".to_string();
@@ -214,7 +214,7 @@ pub fn print_log(xdg_state: String,addr_to: &str) -> Result<(), &str> {
     }
 }
 impl LogMessage for String {
-    fn log_message(&self,xdg_state: String, addr_to: &str, private_us: &str) {
+    fn log_message(&self, xdg_state: String, addr_to: &str, private_us: &str) {
         let mut chat_log = match std::fs::exists(format!("{xdg_state}/history/{addr_to}.txt")) {
             Ok(true) => {
                 let mut buffer = "".to_string();
@@ -222,15 +222,17 @@ impl LogMessage for String {
                     .unwrap()
                     .read_to_string(&mut buffer)
                     .unwrap();
-                let mut chat_log = std::fs::File::create(format!("{xdg_state}/history/{addr_to}.txt"))
-                    .expect("failed to create a file");
+                let mut chat_log =
+                    std::fs::File::create(format!("{xdg_state}/history/{addr_to}.txt"))
+                        .expect("failed to create a file");
                 chat_log.write_all(buffer.as_bytes());
                 chat_log
             }
 
             _ => {
-                let mut chat_log = std::fs::File::create(format!("{xdg_state}/history/{addr_to}.txt"))
-                    .expect("failed to create a file");
+                let mut chat_log =
+                    std::fs::File::create(format!("{xdg_state}/history/{addr_to}.txt"))
+                        .expect("failed to create a file");
                 chat_log
             }
         };
@@ -254,7 +256,7 @@ impl LogMessage for String {
 }
 
 impl SaveStream for TcpStream {
-    fn save_stream(&self,xdg_state: String, addr_to: &str, private_us: &str) {
+    fn save_stream(&self, xdg_state: String, addr_to: &str, private_us: &str) {
         let mut chat_log = match std::fs::exists(format!("{xdg_state}/history/{addr_to}.txt")) {
             Ok(true) => {
                 let mut buffer = "".to_string();

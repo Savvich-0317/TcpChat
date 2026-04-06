@@ -84,7 +84,8 @@ fn main() {
         .unwrap()
         .to_string();
     let config_dir = projectdir.config_dir().to_str().unwrap().to_string();
-
+    create_config(config_dir.clone());
+    
     loop {
     let path = format!("{config_dir}/config.toml");
     //fs::File::create(format!("{path}/config.toml")).unwrap();
@@ -516,6 +517,9 @@ You can learn more about it at **https://commonmark.org/**
                     }
                 });
             });
+            if saved_config.encryption && private.is_empty() && public.is_empty(){
+                siv.add_layer(Dialog::new().title("Warning").content(TextView::new("Encryption is enabled, but there are no keys.")).button("skip", |siv| {siv.pop_layer();}));
+            }
             siv.run();
             let user_data = siv.take_user_data::<ReadedData>();
             if user_data.is_none() {
