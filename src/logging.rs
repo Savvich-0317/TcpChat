@@ -10,12 +10,11 @@ use directories::ProjectDirs;
 
 use crate::decrypt_message;
 pub fn create_config(path: String) {
-    if !fs::exists(format!("{path}/config.toml")).is_ok(){
+    if !fs::exists(format!("{path}/config.toml")).is_ok() {
         fs::File::create_new(format!("{path}/config.toml")).unwrap();
         fs::write(format!("{path}/config.toml"), "addr_us = \"localhost:2424\"\nlast_addr_to = \"localhost:2424\"\nencryption = true\nkeys_auth = true\nsave_history = false\ntui_interface = true\nsend_notifys = true").unwrap();
-
     }
-    }
+}
 pub fn get_key(xdg_state: String, addr_to: String) -> String {
     let start = "key for remember purposes: -----BEGIN PUBLIC KEY-----\n";
     let content = fs::read_to_string(format!("history/{addr_to}.txt")).unwrap();
@@ -28,11 +27,32 @@ pub fn get_key(xdg_state: String, addr_to: String) -> String {
 }
 pub fn init() {
     if let Some(proj_dirs) = ProjectDirs::from("", "Savvich", "TcpChat") {
-        
-        if let Ok(false) = fs::exists(proj_dirs.state_dir().unwrap()) {
-            fs::create_dir(proj_dirs.state_dir().unwrap()).unwrap();
+        if let Ok(false) = fs::exists(format!(
+            "{}/history",
+            proj_dirs.state_dir().unwrap().to_string_lossy()
+        )) {
+            fs::create_dir(format!(
+                "{}/history",
+                proj_dirs.state_dir().unwrap().to_string_lossy()
+            ))
+            .unwrap();
             println!(
                 "created state history  {}",
+                proj_dirs.state_dir().unwrap().to_str().unwrap()
+            );
+        }
+        
+        if let Ok(false) = fs::exists(format!(
+            "{}/keys",
+            proj_dirs.config_dir().to_string_lossy()
+        )) {
+            fs::create_dir(format!(
+                "{}/keys",
+                proj_dirs.config_dir().to_string_lossy()
+            ))
+            .unwrap();
+            println!(
+                "created config keys  {}",
                 proj_dirs.state_dir().unwrap().to_str().unwrap()
             );
         }

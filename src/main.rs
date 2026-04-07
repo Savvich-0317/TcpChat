@@ -50,7 +50,8 @@ use sha2::{Sha256, digest::consts::U160};
 use crate::{
     listen::{GetHandshake, PrintStream},
     logging::{
-        LogMessage, PrintMessage, create_config, get_key, is_familliar_key, keystamp, last_com, print_log, timestamp
+        LogMessage, PrintMessage, create_config, get_key, is_familliar_key, keystamp, last_com,
+        print_log, timestamp,
     },
     sender::TcpSender,
 };
@@ -87,16 +88,16 @@ fn main() {
     create_config(config_dir.clone());
     
     loop {
-    let path = format!("{config_dir}/config.toml");
-    //fs::File::create(format!("{path}/config.toml")).unwrap();
+        let path = format!("{config_dir}/config.toml");
+        //fs::File::create(format!("{path}/config.toml")).unwrap();
         println!("TcpChat");
         //create_config(format!("{config_dir}/config.toml"));
         let content = fs::read_to_string(format!("{config_dir}/config.toml")).unwrap();
-        
+
         let mut saved_config: Config = toml::from_str(content.as_str()).unwrap();
 
         let mut private = "".to_string();
-        match fs::read_to_string("keys/rsa_key") {
+        match fs::read_to_string(format!("{config_dir}keys/rsa_key")) {
             Ok(text) => private = text.to_string(),
             Err(_) => {
                 println!("There is no RSA private key in running dir.")
@@ -106,7 +107,7 @@ fn main() {
         let mut public = "".to_string();
 
         static CONNECTED: LazyLock<Mutex<String>> = LazyLock::new(|| Mutex::new(String::new()));
-        match fs::read_to_string("keys/rsa_key_public.pem") {
+        match fs::read_to_string(format!("{config_dir}keys/rsa_key")) {
             Ok(text) => public = text,
             Err(_) => {
                 println!("There is no RSA public key in running dir.")
@@ -517,8 +518,30 @@ You can learn more about it at **https://commonmark.org/**
                     }
                 });
             });
-            if saved_config.encryption && private.is_empty() && public.is_empty(){
-                siv.add_layer(Dialog::new().title("Warning").content(TextView::new("Encryption is enabled, but there are no keys.")).button("skip", |siv| {siv.pop_layer();}));
+            if saved_config.encryption && private.is_empty() && public.is_empty() {
+                siv.add_layer(Dialog::new().title("Warning").content(TextView::new("Encryption is enabled, but there are no keys.")).button("Generate keys", |s|{s.add_layer(Dialog::new().title(StyledString::styled(
+                            "Warning!",
+                            ColorStyle::new(BaseColor::White, BaseColor::Red)
+                        )).content(TextView::new("this thing is gonna delete and generate the keys.\nThe conversators will receive a warning like you texting from another pc and potentially can be other person.\nContinue?"))
+                        .button("Cancel", |s|{s.pop_layer();}).button("Yes", |s|{
+                            s.pop_layer();
+                            s.add_layer(Dialog::new().title("Setting size").content(TextView::new("Choose size for keys\nI recommend to use 4096 but if you have bad pc go with 2048")).button("2048", move |s|{s.pop_layer();
+                                s.add_layer(Dialog::new().title("result").content(TextView::new(regenerate_keys(2048))).button("Okay", |s|{s.pop_layer();}))
+
+
+                            }).button("4096", move |s|{s.pop_layer();
+                                    s.add_layer(Dialog::new().title("result").content(TextView::new(regenerate_keys(4096))).button("Okay", |s|{s.pop_layer();}));}));
+
+
+
+
+
+
+
+
+
+
+                    }));}).button("skip", |siv| {siv.pop_layer();}));
             }
             siv.run();
             let user_data = siv.take_user_data::<ReadedData>();
