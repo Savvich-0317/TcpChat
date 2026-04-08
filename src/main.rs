@@ -390,11 +390,11 @@ fn main() {
                         .button("Cancel", |s|{s.pop_layer();}).button("Yes", |s|{
                             s.pop_layer();
                             s.add_layer(Dialog::new().title("Setting size").content(TextView::new("Choose size for keys\nI recommend to use 4096 but if you have bad pc go with 2048")).button("2048", move |s|{s.pop_layer();
-                                s.add_layer(Dialog::new().title("result").content(TextView::new(regenerate_keys(2048))).button("Okay", |s|{s.pop_layer();}))
+                                s.add_layer(Dialog::new().title("result").content(TextView::new(regenerate_keys("".to_string(),2048))).button("Okay", |s|{s.pop_layer();}))
 
 
                             }).button("4096", move |s|{s.pop_layer();
-                                    s.add_layer(Dialog::new().title("result").content(TextView::new(regenerate_keys(4096))).button("Okay", |s|{s.pop_layer();}));}));
+                                    s.add_layer(Dialog::new().title("result").content(TextView::new(regenerate_keys("".to_string(),4096))).button("Okay", |s|{s.pop_layer();}));}));
 
 
 
@@ -526,11 +526,11 @@ You can learn more about it at **https://commonmark.org/**
                         .button("Cancel", |s|{s.pop_layer();}).button("Yes", |s|{
                             s.pop_layer();
                             s.add_layer(Dialog::new().title("Setting size").content(TextView::new("Choose size for keys\nI recommend to use 4096 but if you have bad pc go with 2048")).button("2048", move |s|{s.pop_layer();
-                                s.add_layer(Dialog::new().title("result").content(TextView::new(regenerate_keys(2048))).button("Okay", |s|{s.pop_layer();}))
+                                s.add_layer(Dialog::new().title("result").content(TextView::new(regenerate_keys("".to_string(),2048))).button("Okay", |s|{s.pop_layer();}))
 
 
                             }).button("4096", move |s|{s.pop_layer();
-                                    s.add_layer(Dialog::new().title("result").content(TextView::new(regenerate_keys(4096))).button("Okay", |s|{s.pop_layer();}));}));
+                                    s.add_layer(Dialog::new().title("result").content(TextView::new(regenerate_keys("".to_string(),4096))).button("Okay", |s|{s.pop_layer();}));}));
 
 
 
@@ -583,7 +583,7 @@ You can learn more about it at **https://commonmark.org/**
                         choose = "4096".to_string();
                     }
                     io::stdin().read_line(&mut choose).unwrap();
-                    regenerate_keys(choose.trim().parse().unwrap());
+                    regenerate_keys("".to_string(),choose.trim().parse().unwrap());
                 }
             }
             "5" => {
@@ -1088,14 +1088,15 @@ fn decrypt_message(message: String, private_us: String) -> String {
         String::from_utf8(decrypted).unwrap()
     }
 }
-fn regenerate_keys(size: u32) -> String {
-    for entry in fs::read_dir("keys").unwrap() {
+fn regenerate_keys(config_dir: String,size: u32) -> String {
+    
+    for entry in fs::read_dir(format!("{config_dir}keys/rsa_key")).unwrap() {
         let _ = fs::remove_file(entry.unwrap().path());
     }
     let output = Command::new("bash")
 
             .arg("-c")
-            .arg(format!("cd keys && ssh-keygen -t rsa -b {size} -m PKCS8 -f rsa_key -N \"\"&& ssh-keygen -f rsa_key.pub -e -m PKCS8 > rsa_key_public.pem")
+            .arg(format!("cd {config_dir}keys && ssh-keygen -t rsa -b {size} -m PKCS8 -f rsa_key -N \"\"&& ssh-keygen -f rsa_key.pub -e -m PKCS8 > rsa_key_public.pem")
 )
             .output().unwrap();
     format!(
